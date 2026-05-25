@@ -10,6 +10,7 @@ describe("prompt validation", () => {
 
   test("requires dict content placeholder for dictionary profiles", () => {
     expect(validatePromptMessages("dictionary", [{ role: "user", content: "Explain {{dict content}}" }])).toBeNull();
+    expect(validatePromptMessages("dictionary-source", [{ role: "user", content: "Explain source {{dict content}}" }])).toBeNull();
     expect(validatePromptMessages("dictionary", [{ role: "user", content: "Explain {{content}}" }])).toContain(
       "{{dict content}}"
     );

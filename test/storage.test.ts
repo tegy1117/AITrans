@@ -7,11 +7,29 @@ describe("storage state", () => {
 
     expect(state.promptProfiles.map((profile) => profile.purpose).sort()).toEqual([
       "dictionary",
+      "dictionary-source",
       "image",
       "page",
       "selection"
     ]);
     expect(state.selectionResultDisplayMode).toBe("drawer");
+  });
+
+  test("creates separate active profiles for source and translated dictionary terms", () => {
+    const state = createDefaultState();
+
+    expect(state.activeProfileByPurpose["dictionary-source"]).toBe("dictionary-source-default");
+    expect(state.activeProfileByPurpose.dictionary).toBe("dictionary-default");
+  });
+
+  test("adds missing source dictionary profile when normalizing older state", () => {
+    const oldState = createDefaultState();
+    const normalized = normalizeState({
+      promptProfiles: oldState.promptProfiles.filter((profile) => profile.purpose !== "dictionary-source")
+    });
+
+    expect(normalized.promptProfiles.some((profile) => profile.id === "dictionary-source-default")).toBe(true);
+    expect(normalized.activeProfileByPurpose["dictionary-source"]).toBe("dictionary-source-default");
   });
 
   test("normalizes missing persisted fields without losing provider configs", () => {
@@ -37,7 +55,8 @@ describe("storage state", () => {
         page: "missing",
         selection: "selection-default",
         image: "image-default",
-        dictionary: "dictionary-default"
+        dictionary: "dictionary-default",
+        "dictionary-source": "dictionary-source-default"
       }
     });
 

@@ -2,7 +2,7 @@ import type { ExtensionState, ProfilePurpose, PromptProfile } from "./types";
 
 export const STORAGE_KEY = "aiTranslationExtensionState";
 
-const PURPOSES: ProfilePurpose[] = ["page", "selection", "image", "dictionary"];
+const PURPOSES: ProfilePurpose[] = ["page", "selection", "image", "dictionary", "dictionary-source"];
 
 export function createDefaultState(): ExtensionState {
   const promptProfiles = createDefaultPromptProfiles();
@@ -28,7 +28,7 @@ export function createDefaultState(): ExtensionState {
 
 export function normalizeState(input: Partial<ExtensionState> | undefined | null = undefined): ExtensionState {
   const defaults = createDefaultState();
-  const promptProfiles = input?.promptProfiles?.length ? input.promptProfiles : defaults.promptProfiles;
+  const promptProfiles = normalizePromptProfiles(input?.promptProfiles, defaults.promptProfiles);
   const requestedActive = {
     ...defaults.activeProfileByPurpose,
     ...input?.activeProfileByPurpose
@@ -42,6 +42,19 @@ export function normalizeState(input: Partial<ExtensionState> | undefined | null
     selectionModeEnabled: input?.selectionModeEnabled ?? false,
     selectionResultDisplayMode: input?.selectionResultDisplayMode === "bubble" ? "bubble" : "drawer"
   };
+}
+
+function normalizePromptProfiles(input: PromptProfile[] | undefined, defaults: PromptProfile[]): PromptProfile[] {
+  if (!input?.length) return defaults;
+
+  const next = [...input];
+  for (const purpose of PURPOSES) {
+    if (!next.some((profile) => profile.purpose === purpose)) {
+      const fallback = defaults.find((profile) => profile.purpose === purpose);
+      if (fallback) next.push(fallback);
+    }
+  }
+  return next;
 }
 
 export async function loadState(): Promise<ExtensionState> {
@@ -66,8 +79,14 @@ function createDefaultPromptProfiles(): PromptProfile[] {
     createProfile(
       "dictionary-default",
       "dictionary",
-      "사전 항목",
+      "번역문 사전 항목",
       "다음 단어를 한국어 사전 항목으로 설명해줘: {{dict content}}\n\n원문 문맥:\n{{content}}\n\n원문과 번역문:\n{{translation context}}"
+    ),
+    createProfile(
+      "dictionary-source-default",
+      "dictionary-source",
+      "원문 사전 항목",
+      "다음 원문 단어를 한국어 사전 항목으로 설명해줘: {{dict content}}\n\n원문 문맥:\n{{content}}\n\n원문과 번역문:\n{{translation context}}"
     )
   ];
 }

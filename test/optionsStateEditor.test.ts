@@ -69,6 +69,20 @@ describe("options state editor", () => {
     expect(active.activeProfileByPurpose.selection).toBe("selection-formal-copy");
   });
 
+  test("adds source dictionary profiles with dictionary placeholders", () => {
+    const state = addProfile(createDefaultState(), {
+      id: "dictionary-source-alt",
+      purpose: "dictionary-source",
+      name: "원문 사전 대체",
+      providerId: "ollama-local",
+      model: "llama3.2"
+    });
+
+    const profile = state.promptProfiles.find((candidate) => candidate.id === "dictionary-source-alt");
+    expect(profile?.messages.map((message) => message.content).join("\n")).toContain("{{dict content}}");
+    expect(state.activeProfileByPurpose["dictionary-source"]).toBe("dictionary-source-default");
+  });
+
   test("deleting the active profile switches to another profile with the same purpose", () => {
     const state = setActiveProfile(
       addProfile(createDefaultState(), {

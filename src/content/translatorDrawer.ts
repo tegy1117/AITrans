@@ -1,14 +1,18 @@
+import type { DictionaryTermSource } from "../shared/types";
+
 export type DrawerState = "loading" | "translated" | "error";
 export type DictionaryCandidateStatus = "pending" | "generated" | "error" | "saved";
 
 export interface HighlightedTerm {
   id: string;
   term: string;
+  source: DictionaryTermSource;
 }
 
 export interface DictionaryCandidate {
   id: string;
   term: string;
+  termSource: DictionaryTermSource;
   sourceText: string;
   status: DictionaryCandidateStatus;
   explanation?: string;
@@ -19,7 +23,12 @@ export interface TranslatorDrawerOptions {
   state: DrawerState;
   text: string;
   sourceText?: string;
-  onDictionaryRequest?: (term: string, sourceText: string, translationContext: string) => Promise<string>;
+  onDictionaryRequest?: (
+    term: string,
+    sourceText: string,
+    translationContext: string,
+    termSource: DictionaryTermSource
+  ) => Promise<string>;
   onDictionarySave?: (term: string, sourceText: string, explanation: string) => Promise<void>;
 }
 
@@ -71,17 +80,17 @@ function renderTranslatedDrawer(drawer: HTMLElement, options: TranslatorDrawerOp
   const sourceSection = textSection("원문", "drawer-source", sourceText || "원문 정보가 없습니다.");
   const result = textSection("번역문", "drawer-result", options.text);
   sourceSection.addEventListener("mouseup", () => {
-    addSelectedTerm(sourceSection);
+    addSelectedTerm(sourceSection, "source");
   });
   result.addEventListener("mouseup", () => {
-    addSelectedTerm(result);
+    addSelectedTerm(result, "translation");
   });
 
-  function addSelectedTerm(container: HTMLElement): void {
+  function addSelectedTerm(container: HTMLElement, termSource: DictionaryTermSource): void {
     const selected = window.getSelection()?.toString().trim();
     if (!selected || !container.textContent?.includes(selected)) return;
-    if (terms.some((term) => term.term === selected)) return;
-    terms.push({ id: createId("term"), term: selected });
+    if (terms.some((term) => term.term === selected && term.source === termSource)) return;
+    terms.push({ id: createId("term"), term: selected, source: termSource });
     renderTerms();
   }
 
@@ -137,7 +146,7 @@ function renderTranslatedDrawer(drawer: HTMLElement, options: TranslatorDrawerOp
       const remove = createIconButton("삭제", "remove-highlighted-term", () => {
         const index = terms.findIndex((candidate) => candidate.id === term.id);
         if (index >= 0) terms.splice(index, 1);
-        candidates.delete(term.term);
+        candidates.delete(candidateKey(term));
         renderTerms();
         renderCandidates();
       });
@@ -192,21 +201,22 @@ async function generateCandidates(
   candidates: Map<string, DictionaryCandidate>,
   sourceText: string,
   translationContext: string,
-  request: (term: string, sourceText: string, translationContext: string) => Promise<string>,
+  request: (term: string, sourceText: string, translationContext: string, termSource: DictionaryTermSource) => Promise<string>,
   render: () => void
 ): Promise<void> {
   for (const term of terms) {
     const candidate: DictionaryCandidate = {
       id: createId("candidate"),
       term: term.term,
+      termSource: term.source,
       sourceText: translationContext,
       status: "pending"
     };
-    candidates.set(term.term, candidate);
+    candidates.set(candidateKey(term), candidate);
     render();
 
     try {
-      candidate.explanation = await request(term.term, sourceText, translationContext);
+      candidate.explanation = await request(term.term, sourceText, translationContext, term.source);
       candidate.status = "generated";
     } catch (error) {
       candidate.status = "error";
@@ -244,7 +254,7 @@ function renderCandidate(
 
   const actions: HTMLElement[] = [
     createButton("삭제", "delete-dictionary-candidate", () => {
-      candidates.delete(candidate.term);
+      candidates.delete(candidateKey({ term: candidate.term, source: candidate.termSource }));
       render();
     })
   ];
@@ -324,4 +334,8 @@ function muted(text: string): HTMLElement {
 
 function createId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function candidateKey(term: Pick<HighlightedTerm, "term" | "source">): string {
+  return `${term.source}:${term.term}`;
 }

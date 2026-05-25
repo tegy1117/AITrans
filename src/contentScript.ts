@@ -1,4 +1,4 @@
-import type { BackgroundResponse } from "./shared/types";
+import type { BackgroundResponse, DictionaryTermSource } from "./shared/types";
 import { collectTranslatableTextNodes, createBatches, replaceTextNodes, restoreTextNodes, type TextReplacement } from "./content/domTranslator";
 import { showTranslatorDrawer } from "./content/translatorDrawer";
 import { showSelectionBubble } from "./content/selectionBubble";
@@ -141,8 +141,8 @@ async function getSelectionResultDisplayMode(): Promise<"drawer" | "bubble"> {
 
 function dictionaryCallbacks() {
   return {
-    onDictionaryRequest: async (term: string, sourceText: string, translationContext: string) => {
-      const dictionaryResponse = await sendBackground({ type: "generateDictionaryEntry", term, sourceText, translationContext });
+    onDictionaryRequest: async (term: string, sourceText: string, translationContext: string, termSource: DictionaryTermSource) => {
+      const dictionaryResponse = await sendBackground({ type: "generateDictionaryEntry", term, sourceText, translationContext, termSource });
       if (!dictionaryResponse.ok || !dictionaryResponse.text) {
         throw new Error(dictionaryResponse.ok ? "사전 설명이 반환되지 않았습니다." : dictionaryResponse.error);
       }

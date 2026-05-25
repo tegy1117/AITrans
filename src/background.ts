@@ -51,7 +51,7 @@ async function handleMessage(request: BackgroundRequest): Promise<BackgroundResp
   }
 
   if (request.type === "generateDictionaryEntry") {
-    return { ok: true, text: await generateDictionaryEntry(request.term, request.sourceText, request.translationContext) };
+    return { ok: true, text: await generateDictionaryEntry(request.term, request.sourceText, request.translationContext, request.termSource) };
   }
 
   if (request.type === "saveDictionaryEntry") {
@@ -107,12 +107,17 @@ async function translateImage(imageUrl: string): Promise<string> {
   return translateWithProvider(provider, prompt);
 }
 
-async function generateDictionaryEntry(term: string, sourceText: string, translationContext?: string): Promise<string> {
+async function generateDictionaryEntry(
+  term: string,
+  sourceText: string,
+  translationContext?: string,
+  termSource: "source" | "translation" = "translation"
+): Promise<string> {
   const trimmedTerm = term.trim();
   if (!trimmedTerm) throw new Error("사전에 추가할 단어를 입력해 주세요.");
 
   const state = await loadState();
-  const profile = findActiveProfile(state, "dictionary");
+  const profile = findActiveProfile(state, termSource === "source" ? "dictionary-source" : "dictionary");
   const provider = state.providerConfigs.find((config) => config.id === profile.providerId);
   if (!provider) throw new Error(`Provider ${profile.providerId} is not configured.`);
 

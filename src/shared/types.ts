@@ -1,4 +1,6 @@
-export type ProfilePurpose = "page" | "selection" | "image" | "dictionary";
+export type ProfilePurpose = "page" | "selection" | "image" | "dictionary" | "dictionary-source";
+
+export type DictionaryTermSource = "source" | "translation";
 
 export type SelectionResultDisplayMode = "drawer" | "bubble";
 
@@ -79,7 +81,7 @@ export type BackgroundRequest =
   | { type: "translatePage"; texts: string[] }
   | { type: "translateSelection"; text: string }
   | { type: "translateImage"; imageUrl: string }
-  | { type: "generateDictionaryEntry"; term: string; sourceText: string; translationContext?: string }
+  | { type: "generateDictionaryEntry"; term: string; sourceText: string; translationContext?: string; termSource?: DictionaryTermSource }
   | { type: "saveDictionaryEntry"; entry: DictionaryEntry }
   | { type: "deleteDictionaryEntry"; id: string }
   | { type: "restorePage" }

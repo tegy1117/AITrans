@@ -36,5 +36,5 @@ function assertRequiredPlaceholder(profile: PromptProfile): void {
 }
 
 function requiredPlaceholderFor(purpose: ProfilePurpose): string {
-  return purpose === "dictionary" ? DICT_PLACEHOLDER : CONTENT_PLACEHOLDER;
+  return purpose === "dictionary" || purpose === "dictionary-source" ? DICT_PLACEHOLDER : CONTENT_PLACEHOLDER;
 }

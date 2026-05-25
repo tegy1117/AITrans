@@ -67,8 +67,8 @@ describe("translator drawer", () => {
     await Promise.resolve();
 
     const dictionaryContext = "원문:\nOriginal context\n\n번역문:\nalpha beta";
-    expect(onDictionaryRequest).toHaveBeenCalledWith("alpha", "Original context", dictionaryContext);
-    expect(onDictionaryRequest).toHaveBeenCalledWith("beta", "Original context", dictionaryContext);
+    expect(onDictionaryRequest).toHaveBeenCalledWith("alpha", "Original context", dictionaryContext, "translation");
+    expect(onDictionaryRequest).toHaveBeenCalledWith("beta", "Original context", dictionaryContext, "translation");
     expect(document.body.textContent).toContain("alpha: 설명");
     expect(document.body.textContent).toContain("beta: 설명");
 
@@ -95,6 +95,34 @@ describe("translator drawer", () => {
 
     const terms = Array.from(document.querySelectorAll("[data-role='highlighted-term-label']")).map((node) => node.textContent);
     expect(terms).toEqual(["source", "translated"]);
+  });
+
+  test("keeps equal source and translated terms separate for dictionary generation", async () => {
+    const onDictionaryRequest = vi.fn(async (term: string, _sourceText: string, _translationContext: string, termSource: string) =>
+      `${term}-${termSource}`
+    );
+
+    showTranslatorDrawer({
+      state: "translated",
+      text: "same",
+      sourceText: "same",
+      onDictionaryRequest
+    });
+
+    const source = document.querySelector<HTMLElement>("[data-role='drawer-source']")!;
+    selectText(source.firstChild!, 0, 4);
+    source.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
+    const result = document.querySelector<HTMLElement>("[data-role='drawer-result']")!;
+    selectText(result.firstChild!, 0, 4);
+    result.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
+    document.querySelector<HTMLButtonElement>("[data-action='generate-dictionaries']")?.click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(onDictionaryRequest).toHaveBeenCalledWith("same", "same", "same", "source");
+    expect(onDictionaryRequest).toHaveBeenCalledWith("same", "same", "same", "translation");
   });
 
   test("renders loading and error states", () => {

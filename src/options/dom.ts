@@ -25,7 +25,7 @@ import {
 } from "./stateEditor";
 
 const providerTypes: ProviderType[] = ["openai", "claude", "gemini", "ollama-local", "ollama-cloud", "custom-openai-compatible"];
-const purposes: ProfilePurpose[] = ["page", "selection", "image", "dictionary"];
+const purposes: ProfilePurpose[] = ["page", "selection", "image", "dictionary-source", "dictionary"];
 const roles: MessageRole[] = ["system", "user", "assistant"];
 const reasoningEfforts: ReasoningEffort[] = ["minimal", "low", "medium", "high"];
 
@@ -523,7 +523,8 @@ function purposeLabel(purpose: ProfilePurpose): string {
   if (purpose === "page") return "페이지 번역";
   if (purpose === "selection") return "선택 영역 번역";
   if (purpose === "image") return "이미지 번역";
-  return "사전";
+  if (purpose === "dictionary-source") return "원문 사전";
+  return "번역문 사전";
 }
 
 function roleLabel(role: string): string {

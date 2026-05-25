@@ -126,11 +126,14 @@ function withProviderDefaults(provider: ProviderConfig): ProviderConfig {
 }
 
 function defaultMessagesFor(purpose: ProfilePurpose): PromptMessage[] {
-  if (purpose === "dictionary") {
+  if (purpose === "dictionary" || purpose === "dictionary-source") {
     return [
       {
         role: "user",
-        content: "{{dict content}} 단어를 한국어 사전 항목으로 설명해줘.\n\n원문 문맥:\n{{content}}\n\n원문과 번역문:\n{{translation context}}"
+        content:
+          purpose === "dictionary-source"
+            ? "{{dict content}} 원문 단어를 한국어 사전 항목으로 설명해줘.\n\n원문 문맥:\n{{content}}\n\n원문과 번역문:\n{{translation context}}"
+            : "{{dict content}} 번역문 단어를 한국어 사전 항목으로 설명해줘.\n\n원문 문맥:\n{{content}}\n\n원문과 번역문:\n{{translation context}}"
       }
     ];
   }
@@ -142,5 +145,6 @@ function purposeLabel(purpose: ProfilePurpose): string {
   if (purpose === "page") return "페이지 번역";
   if (purpose === "selection") return "선택 영역 번역";
   if (purpose === "image") return "이미지 번역";
-  return "사전";
+  if (purpose === "dictionary-source") return "원문 사전";
+  return "번역문 사전";
 }
