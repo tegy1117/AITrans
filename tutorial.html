@@ -30,6 +30,17 @@
 문맥: {{content}}</code></pre>
       </section>
       <section>
+        <h2>{{translation context}}란?</h2>
+        <p>
+          <code>{{translation context}}</code>는 사전 기능에서 원문과 번역문을 함께 넣는 자리입니다.
+          선택한 단어가 번역문 안에서 어떤 의미로 쓰였는지 AI가 더 잘 판단할 수 있게 합니다.
+        </p>
+        <pre><code>단어: {{dict content}}
+원문 문맥: {{content}}
+원문과 번역문:
+{{translation context}}</code></pre>
+      </section>
+      <section>
         <h2>메시지 순서와 assistant 프리필</h2>
         <p>
           메시지는 위에서 아래 순서대로 AI에 전달됩니다. <code>assistant</code> 메시지를 중간에 넣으면

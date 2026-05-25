@@ -55,4 +55,27 @@ describe("renderPrompt", () => {
 
     expect(rendered.messages.at(-1)?.content).toBe("Word: serendipity");
   });
+
+  test("replaces translation context placeholder independently from content", () => {
+    const rendered = renderPrompt(
+      {
+        ...baseProfile,
+        id: "dict-context",
+        purpose: "dictionary",
+        messages: [
+          { role: "system", content: "Explain the selected word." },
+          { role: "user", content: "Word: {{dict content}}\nSource: {{content}}\nBoth: {{translation context}}" }
+        ]
+      },
+      {
+        content: "Original sentence.",
+        dictContent: "term",
+        translationContext: "원문:\nOriginal sentence.\n\n번역문:\n번역된 문장."
+      }
+    );
+
+    expect(rendered.messages.at(-1)?.content).toBe(
+      "Word: term\nSource: Original sentence.\nBoth: 원문:\nOriginal sentence.\n\n번역문:\n번역된 문장."
+    );
+  });
 });

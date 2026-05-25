@@ -141,8 +141,8 @@ async function getSelectionResultDisplayMode(): Promise<"drawer" | "bubble"> {
 
 function dictionaryCallbacks() {
   return {
-    onDictionaryRequest: async (term: string, sourceText: string) => {
-      const dictionaryResponse = await sendBackground({ type: "generateDictionaryEntry", term, sourceText });
+    onDictionaryRequest: async (term: string, sourceText: string, translationContext: string) => {
+      const dictionaryResponse = await sendBackground({ type: "generateDictionaryEntry", term, sourceText, translationContext });
       if (!dictionaryResponse.ok || !dictionaryResponse.text) {
         throw new Error(dictionaryResponse.ok ? "사전 설명이 반환되지 않았습니다." : dictionaryResponse.error);
       }

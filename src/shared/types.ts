@@ -79,7 +79,7 @@ export type BackgroundRequest =
   | { type: "translatePage"; texts: string[] }
   | { type: "translateSelection"; text: string }
   | { type: "translateImage"; imageUrl: string }
-  | { type: "generateDictionaryEntry"; term: string; sourceText: string }
+  | { type: "generateDictionaryEntry"; term: string; sourceText: string; translationContext?: string }
   | { type: "saveDictionaryEntry"; entry: DictionaryEntry }
   | { type: "deleteDictionaryEntry"; id: string }
   | { type: "restorePage" }

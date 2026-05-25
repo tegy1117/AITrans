@@ -2,10 +2,12 @@ import type { ProfilePurpose, PromptProfile, RenderedPrompt } from "./types";
 
 const CONTENT_PLACEHOLDER = "{{content}}";
 const DICT_PLACEHOLDER = "{{dict content}}";
+const TRANSLATION_CONTEXT_PLACEHOLDER = "{{translation context}}";
 
 export interface PromptRenderInput {
   content: string;
   dictContent?: string;
+  translationContext?: string;
 }
 
 export function renderPrompt(profile: PromptProfile, input: PromptRenderInput): RenderedPrompt {
@@ -19,6 +21,7 @@ export function renderPrompt(profile: PromptProfile, input: PromptRenderInput): 
       content: message.content
         .replaceAll(CONTENT_PLACEHOLDER, input.content)
         .replaceAll(DICT_PLACEHOLDER, input.dictContent ?? "")
+        .replaceAll(TRANSLATION_CONTEXT_PLACEHOLDER, input.translationContext ?? "")
     }))
   };
 }

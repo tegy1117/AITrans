@@ -19,7 +19,7 @@ export interface TranslatorDrawerOptions {
   state: DrawerState;
   text: string;
   sourceText?: string;
-  onDictionaryRequest?: (term: string, sourceText: string) => Promise<string>;
+  onDictionaryRequest?: (term: string, sourceText: string, translationContext: string) => Promise<string>;
   onDictionarySave?: (term: string, sourceText: string, explanation: string) => Promise<void>;
 }
 
@@ -82,7 +82,7 @@ function renderTranslatedDrawer(drawer: HTMLElement, options: TranslatorDrawerOp
     createButton("복사", "copy", () => void navigator.clipboard?.writeText(options.text)),
     createButton("사전 생성", "generate-dictionaries", async () => {
       if (!options.onDictionaryRequest) return;
-      await generateCandidates(terms, candidates, dictionaryContext, options.onDictionaryRequest, renderCandidates);
+      await generateCandidates(terms, candidates, sourceText || options.text, dictionaryContext, options.onDictionaryRequest, renderCandidates);
     })
   ]);
 
@@ -184,21 +184,22 @@ async function generateCandidates(
   terms: HighlightedTerm[],
   candidates: Map<string, DictionaryCandidate>,
   sourceText: string,
-  request: (term: string, sourceText: string) => Promise<string>,
+  translationContext: string,
+  request: (term: string, sourceText: string, translationContext: string) => Promise<string>,
   render: () => void
 ): Promise<void> {
   for (const term of terms) {
     const candidate: DictionaryCandidate = {
       id: createId("candidate"),
       term: term.term,
-      sourceText,
+      sourceText: translationContext,
       status: "pending"
     };
     candidates.set(term.term, candidate);
     render();
 
     try {
-      candidate.explanation = await request(term.term, sourceText);
+      candidate.explanation = await request(term.term, sourceText, translationContext);
       candidate.status = "generated";
     } catch (error) {
       candidate.status = "error";

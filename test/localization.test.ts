@@ -18,6 +18,7 @@ describe("Korean UI localization", () => {
 
     expect(tutorial).toContain("{{content}}");
     expect(tutorial).toContain("{{dict content}}");
+    expect(tutorial).toContain("{{translation context}}");
     expect(tutorial).toContain("프롬프트 안에서 AI에게 보낼 원문이 들어가는 자리");
   });
 

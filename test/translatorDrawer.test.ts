@@ -67,8 +67,8 @@ describe("translator drawer", () => {
     await Promise.resolve();
 
     const dictionaryContext = "원문:\nOriginal context\n\n번역문:\nalpha beta";
-    expect(onDictionaryRequest).toHaveBeenCalledWith("alpha", dictionaryContext);
-    expect(onDictionaryRequest).toHaveBeenCalledWith("beta", dictionaryContext);
+    expect(onDictionaryRequest).toHaveBeenCalledWith("alpha", "Original context", dictionaryContext);
+    expect(onDictionaryRequest).toHaveBeenCalledWith("beta", "Original context", dictionaryContext);
     expect(document.body.textContent).toContain("alpha: 설명");
     expect(document.body.textContent).toContain("beta: 설명");
 

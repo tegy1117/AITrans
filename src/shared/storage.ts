@@ -67,7 +67,7 @@ function createDefaultPromptProfiles(): PromptProfile[] {
       "dictionary-default",
       "dictionary",
       "사전 항목",
-      "다음 단어를 한국어 사전 항목으로 설명해줘: {{dict content}}\n\n문맥:\n{{content}}"
+      "다음 단어를 한국어 사전 항목으로 설명해줘: {{dict content}}\n\n원문 문맥:\n{{content}}\n\n원문과 번역문:\n{{translation context}}"
     )
   ];
 }
