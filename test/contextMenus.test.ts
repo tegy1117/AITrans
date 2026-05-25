@@ -77,4 +77,18 @@ describe("translation context menus", () => {
 
     expect(sendMessage).not.toHaveBeenCalled();
   });
+
+  test("does not leak a rejected tab message when the content script is unavailable", async () => {
+    const sendMessage = vi.fn(async () => {
+      throw new Error("Could not establish connection. Receiving end does not exist.");
+    });
+
+    await expect(
+      handleTranslationContextMenuClick(
+        { menuItemId: SELECTION_TRANSLATE_MENU_ID, selectionText: "Hello" },
+        { id: 42 },
+        sendMessage
+      )
+    ).resolves.toBeUndefined();
+  });
 });

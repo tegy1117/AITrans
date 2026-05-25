@@ -32,7 +32,7 @@ export async function handleTranslationContextMenuClick(
   if (info.menuItemId === SELECTION_TRANSLATE_MENU_ID) {
     if (!info.selectionText?.trim()) return;
 
-    await sendMessage(tab.id, {
+    await sendTabMessageSafely(sendMessage, tab.id, {
       type: "translateSelectedTextFromContextMenu",
       text: info.selectionText.trim()
     });
@@ -42,10 +42,18 @@ export async function handleTranslationContextMenuClick(
   if (info.menuItemId === IMAGE_TRANSLATE_MENU_ID) {
     if (!info.srcUrl?.trim()) return;
 
-    await sendMessage(tab.id, {
+    await sendTabMessageSafely(sendMessage, tab.id, {
       type: "translateImageFromContextMenu",
       imageUrl: info.srcUrl.trim()
     });
+  }
+}
+
+async function sendTabMessageSafely(sendMessage: SendTabMessage, tabId: number, message: unknown): Promise<void> {
+  try {
+    await sendMessage(tabId, message);
+  } catch {
+    // Some pages do not run extension content scripts, e.g. chrome:// pages or newly opened internal pages.
   }
 }
 
