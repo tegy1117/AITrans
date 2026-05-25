@@ -2,7 +2,8 @@ import type { ExtensionState, ProfilePurpose, PromptProfile } from "./types";
 
 export const STORAGE_KEY = "aiTranslationExtensionState";
 
-const PURPOSES: ProfilePurpose[] = ["page", "selection", "image", "dictionary", "dictionary-source"];
+const PURPOSES: ProfilePurpose[] = ["page", "selection", "image", "dictionary", "dictionary-source", "general"];
+const MAX_TRANSLATION_HISTORY = 100;
 
 export function createDefaultState(): ExtensionState {
   const promptProfiles = createDefaultPromptProfiles();
@@ -21,8 +22,10 @@ export function createDefaultState(): ExtensionState {
       PURPOSES.map((purpose) => [purpose, promptProfiles.find((profile) => profile.purpose === purpose)?.id ?? ""])
     ) as ExtensionState["activeProfileByPurpose"],
     dictionaryEntries: [],
+    translationHistory: [],
     selectionModeEnabled: false,
-    selectionResultDisplayMode: "drawer"
+    selectionResultDisplayMode: "drawer",
+    generalTranslatorDisplayMode: "drawer"
   };
 }
 
@@ -39,9 +42,19 @@ export function normalizeState(input: Partial<ExtensionState> | undefined | null
     promptProfiles,
     activeProfileByPurpose: normalizeActiveProfiles(promptProfiles, requestedActive),
     dictionaryEntries: input?.dictionaryEntries ?? [],
+    translationHistory: normalizeTranslationHistory(input?.translationHistory),
     selectionModeEnabled: input?.selectionModeEnabled ?? false,
-    selectionResultDisplayMode: input?.selectionResultDisplayMode === "bubble" ? "bubble" : "drawer"
+    selectionResultDisplayMode: input?.selectionResultDisplayMode === "bubble" ? "bubble" : "drawer",
+    generalTranslatorDisplayMode: input?.generalTranslatorDisplayMode === "window" ? "window" : "drawer"
   };
+}
+
+export function trimTranslationHistory(entries: ExtensionState["translationHistory"]): ExtensionState["translationHistory"] {
+  return entries.slice(0, MAX_TRANSLATION_HISTORY);
+}
+
+function normalizeTranslationHistory(entries: ExtensionState["translationHistory"] | undefined): ExtensionState["translationHistory"] {
+  return trimTranslationHistory(entries ?? []);
 }
 
 function normalizePromptProfiles(input: PromptProfile[] | undefined, defaults: PromptProfile[]): PromptProfile[] {
@@ -76,6 +89,12 @@ function createDefaultPromptProfiles(): PromptProfile[] {
       "선택한 텍스트를 자연스러운 한국어로 번역해줘. 답변은 간결하게 유지해줘.\n\n{{content}}"
     ),
     createProfile("image-default", "image", "이미지 번역", "첨부된 이미지에서 읽을 수 있는 텍스트를 한국어로 번역해줘.\n\n추가 지시:\n{{content}}"),
+    createProfile(
+      "general-default",
+      "general",
+      "일반 번역",
+      "다음 텍스트를 자연스러운 한국어로 번역해줘. 원문의 의미와 어조를 유지해줘.\n\n{{content}}"
+    ),
     createProfile(
       "dictionary-default",
       "dictionary",

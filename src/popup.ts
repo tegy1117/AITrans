@@ -14,6 +14,12 @@ document.querySelector("#restorePage")?.addEventListener("click", async () => {
   await sendToActiveTab({ type: "restoreCurrentPage" });
 });
 
+document.querySelector("#openGeneralTranslator")?.addEventListener("click", async () => {
+  setStatus("일반 번역창을 여는 중...");
+  const response = (await chrome.runtime.sendMessage({ type: "openGeneralTranslator" })) as BackgroundResponse;
+  setStatus(response.ok ? "일반 번역창을 열었습니다." : response.error);
+});
+
 document.querySelector("#openOptions")?.addEventListener("click", () => {
   chrome.runtime.openOptionsPage();
 });

@@ -34,19 +34,24 @@ describe("selection bubble", () => {
 
   test("renders dictionary drawer button without input controls inside the small bubble", () => {
     const onOpenDictionaryDrawer = vi.fn();
+    const onOpenGeneralTranslator = vi.fn();
 
     showSelectionBubble({
       anchor: new DOMRect(20, 30, 100, 20),
       state: "translated",
       text: "번역 결과",
       sourceText: "Original",
-      onOpenDictionaryDrawer
+      onOpenDictionaryDrawer,
+      onOpenGeneralTranslator
     });
 
     expect(document.querySelector("[data-role='dictionary-term']")).toBeNull();
 
     document.querySelector<HTMLButtonElement>("[data-action='dictionary']")?.click();
     expect(onOpenDictionaryDrawer).toHaveBeenCalledOnce();
+
+    document.querySelector<HTMLButtonElement>("[data-action='open-general-translator']")?.click();
+    expect(onOpenGeneralTranslator).toHaveBeenCalledOnce();
   });
 
   test("renders image translation loading and error states", () => {

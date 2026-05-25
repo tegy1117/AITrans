@@ -3,8 +3,12 @@ import { describe, expect, test } from "vitest";
 
 describe("Korean UI localization", () => {
   test("popup and options pages use Korean product-facing copy", () => {
-    expect(readFileSync("popup.html", "utf8")).toContain("AI 번역기");
+    const popup = readFileSync("popup.html", "utf8");
+    expect(popup).toContain("AI 번역기");
+    expect(popup).toContain("일반 번역");
+    expect(popup).not.toContain("프롬프트 변수 사용법 보기");
     expect(readFileSync("options.html", "utf8")).toContain("AI 번역기 설정");
+    expect(readFileSync("options.html", "utf8")).toContain("{{content}}와 {{dict content}} 사용법 보기");
   });
 
   test("manifest and context menu expose Korean descriptions", () => {

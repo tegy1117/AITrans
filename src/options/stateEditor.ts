@@ -144,6 +144,7 @@ function defaultMessagesFor(purpose: ProfilePurpose): PromptMessage[] {
 function purposeLabel(purpose: ProfilePurpose): string {
   if (purpose === "page") return "페이지 번역";
   if (purpose === "selection") return "선택 영역 번역";
+  if (purpose === "general") return "일반 번역";
   if (purpose === "image") return "이미지 번역";
   if (purpose === "dictionary-source") return "원문 사전";
   return "번역문 사전";

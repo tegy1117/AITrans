@@ -3,6 +3,7 @@ import { collectTranslatableTextNodes, createBatches, replaceTextNodes, restoreT
 import { showTranslatorDrawer } from "./content/translatorDrawer";
 import { showSelectionBubble } from "./content/selectionBubble";
 import { getSelectionAnchor, rememberSelectionAnchor } from "./content/selectionContext";
+import { showGeneralTranslatorDrawer } from "./content/generalTranslatorDrawer";
 
 let replacements: TextReplacement[] = [];
 
@@ -30,6 +31,19 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message?.type === "translateImageFromContextMenu") {
     translateImageUrl(String(message.imageUrl ?? ""))
+      .then(() => sendResponse({ ok: true }))
+      .catch((error: unknown) => sendResponse({ ok: false, error: error instanceof Error ? error.message : String(error) }));
+    return true;
+  }
+
+  if (message?.type === "openGeneralTranslatorDrawer") {
+    showGeneralTranslatorDrawer(
+      {
+        sourceText: String(message.sourceText ?? ""),
+        translatedText: String(message.translatedText ?? "")
+      },
+      { sendBackground }
+    )
       .then(() => sendResponse({ ok: true }))
       .catch((error: unknown) => sendResponse({ ok: false, error: error instanceof Error ? error.message : String(error) }));
     return true;
@@ -83,20 +97,23 @@ async function translateSelectionText(text: string): Promise<void> {
     return;
   }
 
+  const translatedText = response.text;
   const drawerOptions = {
     state: "translated" as const,
-    text: response.text,
+    text: translatedText,
     sourceText: trimmed,
-    ...dictionaryCallbacks()
+    ...dictionaryCallbacks(),
+    onOpenGeneralTranslator: openGeneralTranslator
   };
 
   if (displayMode === "bubble") {
     showSelectionBubble({
       anchor,
       state: "translated",
-      text: response.text,
+      text: translatedText,
       sourceText: trimmed,
-      onOpenDictionaryDrawer: () => showTranslatorDrawer(drawerOptions)
+      onOpenDictionaryDrawer: () => showTranslatorDrawer(drawerOptions),
+      onOpenGeneralTranslator: () => openGeneralTranslator(trimmed, translatedText)
     });
     return;
   }
@@ -122,7 +139,8 @@ async function translateImageUrl(imageUrl: string): Promise<void> {
     state: "translated",
     text: response.text,
     sourceText: response.text,
-    ...dictionaryCallbacks()
+    ...dictionaryCallbacks(),
+    onOpenGeneralTranslator: openGeneralTranslator
   });
 }
 
@@ -160,4 +178,8 @@ function dictionaryCallbacks() {
       if (!saveResponse.ok) throw new Error(saveResponse.error);
     }
   };
+}
+
+function openGeneralTranslator(sourceText: string, translatedText: string): void {
+  void sendBackground({ type: "openGeneralTranslator", sourceText, translatedText });
 }

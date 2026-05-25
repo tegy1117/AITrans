@@ -88,4 +88,26 @@ describe("options DOM app", () => {
     expect(onSave).toHaveBeenCalledOnce();
     expect(onSave.mock.calls[0]?.[0].selectionResultDisplayMode).toBe("bubble");
   });
+
+  test("saves general translator display mode immediately when changed", async () => {
+    const root = document.createElement("div");
+    document.body.append(root);
+    const onSave = vi.fn<(state: ExtensionState) => Promise<void>>(async () => undefined);
+    const state = createDefaultState();
+
+    mountOptionsApp(root, state, { onSave });
+
+    const displayModeSelect = Array.from(root.querySelectorAll("label")).find((label) =>
+      label.textContent?.includes("일반 번역창 표시 방식")
+    )?.querySelector("select");
+    expect(displayModeSelect).toBeDefined();
+
+    displayModeSelect!.value = "window";
+    displayModeSelect!.dispatchEvent(new Event("change"));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(onSave).toHaveBeenCalledOnce();
+    expect(onSave.mock.calls[0]?.[0].generalTranslatorDisplayMode).toBe("window");
+  });
 });

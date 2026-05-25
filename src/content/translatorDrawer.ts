@@ -30,6 +30,7 @@ export interface TranslatorDrawerOptions {
     termSource: DictionaryTermSource
   ) => Promise<string>;
   onDictionarySave?: (term: string, sourceText: string, explanation: string) => Promise<void>;
+  onOpenGeneralTranslator?: (sourceText: string, translatedText: string) => void;
 }
 
 const DRAWER_ATTR = "data-ai-translator-drawer";
@@ -96,6 +97,7 @@ function renderTranslatedDrawer(drawer: HTMLElement, options: TranslatorDrawerOp
 
   const actions = row([
     createButton("복사", "copy", () => void navigator.clipboard?.writeText(options.text)),
+    createButton("일반 번역창", "open-general-translator", () => options.onOpenGeneralTranslator?.(sourceText || options.text, options.text)),
     createButton("사전 생성", "generate-dictionaries", async () => {
       if (!options.onDictionaryRequest) return;
       await generateCandidates(terms, candidates, sourceText || options.text, dictionaryContext, options.onDictionaryRequest, renderCandidates);

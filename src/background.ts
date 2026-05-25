@@ -1,6 +1,6 @@
 import { renderPrompt } from "./shared/prompt";
 import { translateWithProvider } from "./shared/providers";
-import { loadState, saveState } from "./shared/storage";
+import { loadState, saveState, trimTranslationHistory } from "./shared/storage";
 import type { BackgroundRequest, BackgroundResponse, ExtensionState, ProfilePurpose } from "./shared/types";
 import { createTranslationContextMenus, handleTranslationContextMenuClick } from "./background/contextMenus";
 import { fetchImagePayload } from "./background/images";
@@ -18,8 +18,8 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   void handleTranslationContextMenuClick(info, tab);
 });
 
-chrome.runtime.onMessage.addListener((request: BackgroundRequest, _sender, sendResponse) => {
-  handleMessage(request)
+chrome.runtime.onMessage.addListener((request: BackgroundRequest, sender, sendResponse) => {
+  handleMessage(request, sender)
     .then(sendResponse)
     .catch((error: unknown) => {
       sendResponse({ ok: false, error: error instanceof Error ? error.message : String(error) });
@@ -27,7 +27,7 @@ chrome.runtime.onMessage.addListener((request: BackgroundRequest, _sender, sendR
   return true;
 });
 
-async function handleMessage(request: BackgroundRequest): Promise<BackgroundResponse> {
+async function handleMessage(request: BackgroundRequest, sender?: chrome.runtime.MessageSender): Promise<BackgroundResponse> {
   if (request.type === "getState") {
     return { ok: true, state: await loadState() };
   }
@@ -48,6 +48,32 @@ async function handleMessage(request: BackgroundRequest): Promise<BackgroundResp
 
   if (request.type === "translateImage") {
     return { ok: true, text: await translateImage(request.imageUrl) };
+  }
+
+  if (request.type === "translateGeneral") {
+    return translateGeneral(request.text);
+  }
+
+  if (request.type === "deleteTranslationHistoryEntry") {
+    const state = await loadState();
+    const nextState: ExtensionState = {
+      ...state,
+      translationHistory: state.translationHistory.filter((entry) => entry.id !== request.id)
+    };
+    await saveState(nextState);
+    return { ok: true, state: nextState };
+  }
+
+  if (request.type === "clearTranslationHistory") {
+    const state = await loadState();
+    const nextState: ExtensionState = { ...state, translationHistory: [] };
+    await saveState(nextState);
+    return { ok: true, state: nextState };
+  }
+
+  if (request.type === "openGeneralTranslator") {
+    await openGeneralTranslator(request.sourceText ?? "", request.translatedText ?? "", sender);
+    return { ok: true };
   }
 
   if (request.type === "generateDictionaryEntry") {
@@ -127,6 +153,59 @@ async function generateDictionaryEntry(
     translationContext: translationContext ?? sourceText
   });
   return translateWithProvider(provider, prompt);
+}
+
+async function translateGeneral(text: string): Promise<BackgroundResponse> {
+  const sourceText = text.trim();
+  if (!sourceText) throw new Error("번역할 텍스트를 입력해 주세요.");
+
+  const state = await loadState();
+  const profile = findActiveProfile(state, "general");
+  const provider = state.providerConfigs.find((config) => config.id === profile.providerId);
+  if (!provider) throw new Error(`Provider ${profile.providerId} is not configured.`);
+
+  const prompt = renderPrompt(profile, { content: sourceText });
+  const translatedText = await translateWithProvider(provider, prompt);
+  const entry = {
+    id: crypto.randomUUID(),
+    sourceText,
+    translatedText,
+    createdAt: new Date().toISOString(),
+    profileId: profile.id,
+    providerId: provider.id,
+    model: profile.model
+  };
+  const nextState: ExtensionState = {
+    ...state,
+    translationHistory: trimTranslationHistory([entry, ...state.translationHistory])
+  };
+  await saveState(nextState);
+  return { ok: true, text: translatedText, state: nextState };
+}
+
+async function openGeneralTranslator(sourceText: string, translatedText: string, sender?: chrome.runtime.MessageSender): Promise<void> {
+  const state = await loadState();
+  if (state.generalTranslatorDisplayMode === "window") {
+    const params = new URLSearchParams();
+    if (sourceText) params.set("sourceText", sourceText);
+    if (translatedText) params.set("translatedText", translatedText);
+    const suffix = params.toString() ? `?${params.toString()}` : "";
+    await chrome.windows.create({
+      url: chrome.runtime.getURL(`translator.html${suffix}`),
+      type: "popup",
+      width: 520,
+      height: 720
+    });
+    return;
+  }
+
+  const tabId = sender?.tab?.id ?? (await chrome.tabs.query({ active: true, currentWindow: true }))[0]?.id;
+  if (!tabId) throw new Error("일반 번역창을 열 활성 탭을 찾을 수 없습니다.");
+  await chrome.tabs.sendMessage(tabId, {
+    type: "openGeneralTranslatorDrawer",
+    sourceText,
+    translatedText
+  });
 }
 
 function findActiveProfile(state: ExtensionState, purpose: ProfilePurpose) {

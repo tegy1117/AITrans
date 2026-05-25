@@ -25,7 +25,7 @@ import {
 } from "./stateEditor";
 
 const providerTypes: ProviderType[] = ["openai", "claude", "gemini", "ollama-local", "ollama-cloud", "custom-openai-compatible"];
-const purposes: ProfilePurpose[] = ["page", "selection", "image", "dictionary-source", "dictionary"];
+const purposes: ProfilePurpose[] = ["page", "selection", "general", "image", "dictionary-source", "dictionary"];
 const roles: MessageRole[] = ["system", "user", "assistant"];
 const reasoningEfforts: ReasoningEffort[] = ["minimal", "low", "medium", "high"];
 
@@ -179,6 +179,15 @@ export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState,
         },
         selectionResultDisplayModeLabel
       ),
+      selectRow(
+        "일반 번역창 표시 방식",
+        state.generalTranslatorDisplayMode,
+        ["drawer", "window"],
+        (value) => {
+          void saveGeneralTranslatorDisplayMode(value as "drawer" | "window");
+        },
+        generalTranslatorDisplayModeLabel
+      ),
       helpText("사이드바는 원문과 번역문을 함께 보여주고, 하단 번역창은 선택 위치 근처에 작은 결과창을 띄웁니다.")
     );
     return panel;
@@ -190,6 +199,18 @@ export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState,
     try {
       await callbacks.onSave(nextState);
       statusMessage = "표시 방식을 저장했습니다.";
+    } catch (error) {
+      statusMessage = error instanceof Error ? error.message : String(error);
+    }
+    render();
+  }
+
+  async function saveGeneralTranslatorDisplayMode(generalTranslatorDisplayMode: "drawer" | "window"): Promise<void> {
+    const nextState = { ...state, generalTranslatorDisplayMode };
+    state = nextState;
+    try {
+      await callbacks.onSave(nextState);
+      statusMessage = "일반 번역창 표시 방식을 저장했습니다.";
     } catch (error) {
       statusMessage = error instanceof Error ? error.message : String(error);
     }
@@ -522,6 +543,7 @@ function stringValue(value: unknown): string {
 function purposeLabel(purpose: ProfilePurpose): string {
   if (purpose === "page") return "페이지 번역";
   if (purpose === "selection") return "선택 영역 번역";
+  if (purpose === "general") return "일반 번역";
   if (purpose === "image") return "이미지 번역";
   if (purpose === "dictionary-source") return "원문 사전";
   return "번역문 사전";
@@ -551,4 +573,8 @@ function reasoningEffortLabel(value: string): string {
 
 function selectionResultDisplayModeLabel(value: string): string {
   return value === "bubble" ? "하단 번역창" : "사이드바";
+}
+
+function generalTranslatorDisplayModeLabel(value: string): string {
+  return value === "window" ? "별도 창" : "사이드바";
 }

@@ -12,6 +12,7 @@ export default defineConfig({
       input: {
         popup: resolve(rootDir, "popup.html"),
         options: resolve(rootDir, "options.html"),
+        translator: resolve(rootDir, "translator.html"),
         tutorial: resolve(rootDir, "tutorial.html"),
         background: resolve(rootDir, "src/background.ts"),
         contentScript: resolve(rootDir, "src/contentScript.ts")

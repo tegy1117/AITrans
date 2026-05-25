@@ -4,12 +4,14 @@ import { showTranslatorDrawer } from "../src/content/translatorDrawer";
 describe("translator drawer", () => {
   test("renders translated text with copy and close actions", () => {
     const writeText = vi.fn();
+    const onOpenGeneralTranslator = vi.fn();
     Object.assign(navigator, { clipboard: { writeText } });
 
     showTranslatorDrawer({
       state: "translated",
       text: "번역 결과",
-      sourceText: "Original text"
+      sourceText: "Original text",
+      onOpenGeneralTranslator
     });
 
     const drawer = document.querySelector("[data-ai-translator-drawer]");
@@ -20,6 +22,9 @@ describe("translator drawer", () => {
 
     drawer?.querySelector<HTMLButtonElement>("[data-action='copy']")?.click();
     expect(writeText).toHaveBeenCalledWith("번역 결과");
+
+    drawer?.querySelector<HTMLButtonElement>("[data-action='open-general-translator']")?.click();
+    expect(onOpenGeneralTranslator).toHaveBeenCalledWith("Original text", "번역 결과");
 
     drawer?.querySelector<HTMLButtonElement>("[data-action='close']")?.click();
     expect(document.querySelector("[data-ai-translator-drawer]")).toBeNull();

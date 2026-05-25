@@ -1,8 +1,10 @@
-export type ProfilePurpose = "page" | "selection" | "image" | "dictionary" | "dictionary-source";
+export type ProfilePurpose = "page" | "selection" | "image" | "dictionary" | "dictionary-source" | "general";
 
 export type DictionaryTermSource = "source" | "translation";
 
 export type SelectionResultDisplayMode = "drawer" | "bubble";
+
+export type GeneralTranslatorDisplayMode = "drawer" | "window";
 
 export type MessageRole = "system" | "user" | "assistant";
 
@@ -68,19 +70,35 @@ export interface DictionaryEntry {
   createdAt: string;
 }
 
+export interface TranslationHistoryEntry {
+  id: string;
+  sourceText: string;
+  translatedText: string;
+  createdAt: string;
+  profileId: string;
+  providerId: string;
+  model: string;
+}
+
 export interface ExtensionState {
   providerConfigs: ProviderConfig[];
   promptProfiles: PromptProfile[];
   activeProfileByPurpose: Record<ProfilePurpose, string>;
   dictionaryEntries: DictionaryEntry[];
+  translationHistory: TranslationHistoryEntry[];
   selectionModeEnabled: boolean;
   selectionResultDisplayMode: SelectionResultDisplayMode;
+  generalTranslatorDisplayMode: GeneralTranslatorDisplayMode;
 }
 
 export type BackgroundRequest =
   | { type: "translatePage"; texts: string[] }
   | { type: "translateSelection"; text: string }
   | { type: "translateImage"; imageUrl: string }
+  | { type: "translateGeneral"; text: string }
+  | { type: "deleteTranslationHistoryEntry"; id: string }
+  | { type: "clearTranslationHistory" }
+  | { type: "openGeneralTranslator"; sourceText?: string; translatedText?: string }
   | { type: "generateDictionaryEntry"; term: string; sourceText: string; translationContext?: string; termSource?: DictionaryTermSource }
   | { type: "saveDictionaryEntry"; entry: DictionaryEntry }
   | { type: "deleteDictionaryEntry"; id: string }
