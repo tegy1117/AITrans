@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI 번역기</title>
+  </head>
+  <body>
+    <main class="popup">
+      <h1>AI 번역기</h1>
+      <p id="profileSummary" class="muted">프로필을 불러오는 중...</p>
+      <button id="translatePage" type="button">페이지 번역</button>
+      <button id="restorePage" type="button">원문 복원</button>
+      <p class="muted">텍스트를 드래그한 뒤 우클릭 메뉴에서 "선택한 텍스트 AI로 번역"을 선택하세요.</p>
+      <button id="openOptions" type="button" class="secondary">설정</button>
+      <a class="help-link" href="/tutorial.html" target="_blank">프롬프트 변수 사용법 보기</a>
+      <p id="status" role="status"></p>
+    </main>
+    <script type="module" src="/src/popup.ts"></script>
+  </body>
+</html>
