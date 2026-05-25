@@ -201,11 +201,15 @@ async function openGeneralTranslator(sourceText: string, translatedText: string,
 
   const tabId = sender?.tab?.id ?? (await chrome.tabs.query({ active: true, currentWindow: true }))[0]?.id;
   if (!tabId) throw new Error("일반 번역창을 열 활성 탭을 찾을 수 없습니다.");
-  await chrome.tabs.sendMessage(tabId, {
-    type: "openGeneralTranslatorDrawer",
-    sourceText,
-    translatedText
-  });
+  try {
+    await chrome.tabs.sendMessage(tabId, {
+      type: "openGeneralTranslatorDrawer",
+      sourceText,
+      translatedText
+    });
+  } catch {
+    throw new Error("이 페이지에서는 일반 번역 사이드바를 열 수 없습니다. 설정에서 일반 번역창 표시 방식을 '별도 창'으로 바꿔 주세요.");
+  }
 }
 
 function findActiveProfile(state: ExtensionState, purpose: ProfilePurpose) {
