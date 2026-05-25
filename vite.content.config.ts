@@ -5,20 +5,17 @@ import { fileURLToPath } from "node:url";
 const rootDir = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({
+  publicDir: false,
   build: {
-    emptyOutDir: true,
+    emptyOutDir: false,
     outDir: "dist",
     rollupOptions: {
-      input: {
-        popup: resolve(rootDir, "popup.html"),
-        options: resolve(rootDir, "options.html"),
-        translator: resolve(rootDir, "translator.html"),
-        tutorial: resolve(rootDir, "tutorial.html"),
-        background: resolve(rootDir, "src/background.ts")
-      },
+      input: resolve(rootDir, "src/contentScript.ts"),
       output: {
-        entryFileNames: "[name].js",
-        chunkFileNames: "chunks/[name]-[hash].js",
+        format: "iife",
+        name: "AITranslatorContentScript",
+        entryFileNames: "contentScript.js",
+        inlineDynamicImports: true,
         assetFileNames: "assets/[name]-[hash][extname]"
       }
     }

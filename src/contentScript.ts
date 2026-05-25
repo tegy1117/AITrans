@@ -8,6 +8,7 @@ import {
   createNumberedCaptionBatches,
   extractCaptionTracksFromDocument,
   fetchCaptionFragments,
+  fetchCaptionTracksFromWatchPage,
   findYouTubePlayerRoot,
   findYouTubeVideo,
   mergeCaptionFragmentsIntoSentences,
@@ -68,8 +69,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message?.type === "getYouTubeCaptionTracks") {
-    sendResponse(getYouTubeCaptionTracksResponse());
-    return false;
+    getYouTubeCaptionTracksResponse()
+      .then(sendResponse)
+      .catch((error: unknown) => sendResponse({ ok: false, error: error instanceof Error ? error.message : String(error) }));
+    return true;
   }
 
   if (message?.type === "startYouTubeCaptionTranslation") {
@@ -224,8 +227,8 @@ function openGeneralTranslator(sourceText: string, translatedText: string): void
   void sendBackground({ type: "openGeneralTranslator", sourceText, translatedText });
 }
 
-function getYouTubeCaptionTracksResponse(): BackgroundResponse {
-  const tracks = extractCaptionTracksFromDocument(document);
+async function getYouTubeCaptionTracksResponse(): Promise<BackgroundResponse> {
+  const tracks = await loadYouTubeCaptionTracks();
   if (tracks.length === 0) {
     return { ok: false, error: "자막 스크립트를 가져올 수 없습니다." };
   }
@@ -236,7 +239,7 @@ function getYouTubeCaptionTracksResponse(): BackgroundResponse {
 async function startYouTubeCaptionTranslation(trackId: string): Promise<void> {
   stopYouTubeCaptionTranslation();
 
-  const tracks = extractCaptionTracksFromDocument(document);
+  const tracks = await loadYouTubeCaptionTracks();
   if (tracks.length === 0) throw new Error("자막 스크립트를 가져올 수 없습니다.");
 
   const track = findCaptionTrack(tracks, trackId);
@@ -320,4 +323,25 @@ async function getYouTubeCaptionPosition(): Promise<YouTubeCaptionPosition> {
 
 function findCaptionTrack(tracks: YouTubeCaptionTrack[], trackId: string): YouTubeCaptionTrack | undefined {
   return tracks.find((track) => track.id === trackId) ?? tracks[0];
+}
+
+async function loadYouTubeCaptionTracks(): Promise<YouTubeCaptionTrack[]> {
+  const tracks = extractCaptionTracksFromDocument(document);
+  if (tracks.length > 0) return tracks;
+
+  if (!isYouTubeWatchPage(location.href)) return [];
+  try {
+    return await fetchCaptionTracksFromWatchPage(location.href);
+  } catch {
+    return [];
+  }
+}
+
+function isYouTubeWatchPage(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return /(^|\.)youtube\.com$/i.test(parsed.hostname) && parsed.pathname === "/watch" && parsed.searchParams.has("v");
+  } catch {
+    return false;
+  }
 }

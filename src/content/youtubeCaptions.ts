@@ -38,6 +38,14 @@ export function extractCaptionTracksFromDocument(doc: Document = document): YouT
   return [];
 }
 
+export async function fetchCaptionTracksFromWatchPage(url: string, fetchFn: typeof fetch = fetch): Promise<YouTubeCaptionTrack[]> {
+  const response = await fetchFn(url, { credentials: "include" });
+  if (!response.ok) throw new Error(`자막 스크립트를 가져올 수 없습니다. HTTP ${response.status}`);
+  const html = await response.text();
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  return extractCaptionTracksFromDocument(doc);
+}
+
 export function extractCaptionTracksFromPlayerResponse(playerResponse: unknown): YouTubeCaptionTrack[] {
   const rawTracks = getPath(playerResponse, ["captions", "playerCaptionsTracklistRenderer", "captionTracks"]);
   if (!Array.isArray(rawTracks)) return [];

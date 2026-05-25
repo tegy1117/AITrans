@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   createNumberedCaptionBatches,
   extractCaptionTracksFromPlayerResponse,
+  fetchCaptionTracksFromWatchPage,
   mergeCaptionFragmentsIntoSentences,
   parseCaptionResponse,
   parseNumberedCaptionResponse,
@@ -24,6 +25,21 @@ describe("YouTube caption helpers", () => {
     expect(tracks.map((track) => track.languageCode)).toEqual(["en", "ko"]);
     expect(tracks[0]?.name).toBe("English");
     expect(tracks[0]?.id).toBeTruthy();
+  });
+
+  test("fetches caption tracks from a youtube watch page html fallback", async () => {
+    const html = `<script>var ytInitialPlayerResponse = ${JSON.stringify({
+      captions: {
+        playerCaptionsTracklistRenderer: {
+          captionTracks: [{ baseUrl: "https://example.com/en", languageCode: "en", name: { simpleText: "English" } }]
+        }
+      }
+    })};</script>`;
+
+    const tracks = await fetchCaptionTracksFromWatchPage("https://www.youtube.com/watch?v=abc", async () => new Response(html));
+
+    expect(tracks).toHaveLength(1);
+    expect(tracks[0]).toMatchObject({ name: "English", languageCode: "en", baseUrl: "https://example.com/en" });
   });
 
   test("parses json3 and xml timed text caption responses", () => {
