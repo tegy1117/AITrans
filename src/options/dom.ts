@@ -1,5 +1,4 @@
 import type {
-  DictionaryEntry,
   ExtensionState,
   GenerationParameters,
   MessageRole,
@@ -39,7 +38,6 @@ export interface OptionsApp {
 
 export interface OptionsAppCallbacks {
   onSave(state: ExtensionState): Promise<ExtensionState | void>;
-  onDeleteDictionaryEntry?(id: string, state: ExtensionState): Promise<ExtensionState>;
 }
 
 const UNSAVED_CHANGES_MESSAGE = "저장하지 않은 변경사항이 있습니다. 저장하거나 변경 취소 후 이동하세요.";
@@ -177,7 +175,6 @@ export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState,
       renderDisplaySettings(),
       renderProviderEditor(),
       renderProfileEditor(),
-      renderDictionaryEntries(),
       row([
         actionButton("전체 설정 저장", saveAllSettings),
         actionButton("변경 취소", cancelUnsavedChanges, !isDirty)
@@ -262,59 +259,6 @@ export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState,
       })
     );
     return panel;
-  }
-
-  function renderDictionaryEntries(): HTMLElement {
-    const panel = element("div", "settings-panel");
-    panel.append(sectionTitle("저장된 사전"));
-
-    if (state.dictionaryEntries.length === 0) {
-      panel.append(muted("아직 저장된 사전 항목이 없습니다."));
-      return panel;
-    }
-
-    const list = element("div", "dictionary-list");
-    for (const entry of state.dictionaryEntries) {
-      list.append(renderDictionaryEntry(entry));
-    }
-    panel.append(list);
-    return panel;
-  }
-
-  function renderDictionaryEntry(entry: DictionaryEntry): HTMLElement {
-    const item = element("article", "dictionary-entry");
-    const title = document.createElement("h3");
-    title.textContent = entry.term;
-
-    const explanation = document.createElement("p");
-    explanation.textContent = entry.explanation;
-
-    const meta = document.createElement("p");
-    meta.className = "muted";
-    meta.textContent = new Date(entry.createdAt).toLocaleString();
-
-    const details = document.createElement("details");
-    const summary = document.createElement("summary");
-    summary.textContent = "원문 보기";
-    const source = document.createElement("p");
-    source.textContent = entry.sourceText;
-    details.append(summary, source);
-
-    const deleteButton = dangerButton("삭제", async () => {
-      if (!guardUnsavedNavigation()) return;
-      if (callbacks.onDeleteDictionaryEntry) {
-        state = await callbacks.onDeleteDictionaryEntry(entry.id, state);
-      } else {
-        state = { ...state, dictionaryEntries: state.dictionaryEntries.filter((candidate) => candidate.id !== entry.id) };
-      }
-      savedState = state;
-      statusMessage = "사전 항목을 삭제했습니다.";
-      render();
-    });
-    deleteButton.dataset.action = "delete-dictionary-entry";
-
-    item.append(title, explanation, meta, details, row([deleteButton]));
-    return item;
   }
 
   function renderProfileEditor(): HTMLElement {

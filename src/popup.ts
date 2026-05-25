@@ -1,5 +1,6 @@
 import "./styles.css";
 import type { BackgroundRequest, BackgroundResponse, ExtensionState, YouTubeCaptionTrack } from "./shared/types";
+import { openExtensionPageInNewTab } from "./popup/navigation";
 import { defaultYouTubeCaptionTrackId, isYouTubeWatchUrl, renderYouTubeCaptionControls } from "./popup/youtubeCaptions";
 
 const status = document.querySelector<HTMLParagraphElement>("#status")!;
@@ -24,6 +25,10 @@ document.querySelector("#openGeneralTranslator")?.addEventListener("click", asyn
   setStatus("일반 번역창을 여는 중...");
   const response = (await chrome.runtime.sendMessage({ type: "openGeneralTranslator" })) as BackgroundResponse;
   setStatus(response.ok ? "일반 번역창을 열었습니다." : response.error);
+});
+
+document.querySelector("#openDictionary")?.addEventListener("click", () => {
+  openExtensionPageInNewTab("dictionary.html", chrome);
 });
 
 document.querySelector("#openOptions")?.addEventListener("click", () => {

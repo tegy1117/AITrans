@@ -131,7 +131,7 @@ describe("options DOM app", () => {
     expect(prevented).toBe(true);
   });
 
-  test("renders saved dictionary entries and deletes them", async () => {
+  test("does not render saved dictionary entries inside the settings editor", async () => {
     const root = document.createElement("div");
     document.body.append(root);
     const onSave = vi.fn<(state: ExtensionState) => Promise<void>>(async () => undefined);
@@ -148,13 +148,10 @@ describe("options DOM app", () => {
 
     mountOptionsApp(root, state, { onSave });
 
-    expect(root.textContent).toContain("저장된 사전");
-    expect(root.textContent).toContain("test");
-    expect(root.textContent).toContain("테스트 설명");
-
-    root.querySelector<HTMLButtonElement>("[data-action='delete-dictionary-entry']")?.click();
-
-    expect(root.textContent).toContain("아직 저장된 사전 항목이 없습니다.");
+    expect(root.textContent).not.toContain("저장된 사전");
+    expect(root.textContent).not.toContain("test");
+    expect(root.textContent).not.toContain("테스트 설명");
+    expect(root.querySelector<HTMLButtonElement>("[data-action='delete-dictionary-entry']")).toBeNull();
   });
 
   test("saves selection result display mode immediately when changed", async () => {

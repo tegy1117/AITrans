@@ -13,6 +13,7 @@ export default defineConfig({
         popup: resolve(rootDir, "popup.html"),
         options: resolve(rootDir, "options.html"),
         translator: resolve(rootDir, "translator.html"),
+        dictionary: resolve(rootDir, "dictionary.html"),
         tutorial: resolve(rootDir, "tutorial.html"),
         background: resolve(rootDir, "src/background.ts")
       },

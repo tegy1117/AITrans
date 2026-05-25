@@ -24,6 +24,10 @@ describe("extension build configuration", () => {
     expect(appConfig).not.toContain("src/contentScript.ts");
   });
 
+  test("builds the dictionary page as an extension app page", () => {
+    expect(appConfig).toContain("dictionary: resolve(rootDir, \"dictionary.html\")");
+  });
+
   test("loads manifest content scripts in the isolated extension world", () => {
     expect(manifest.content_scripts?.[0]?.world).toBe("ISOLATED");
   });
