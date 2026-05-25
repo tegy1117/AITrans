@@ -78,7 +78,7 @@ describe("translator drawer", () => {
     expect(onDictionarySave).toHaveBeenCalledWith("alpha", dictionaryContext, "alpha: 설명");
   });
 
-  test("only translated text selection is used for dictionary highlights", () => {
+  test("adds highlighted terms from source and translated text selections", () => {
     showTranslatorDrawer({
       state: "translated",
       text: "translated term",
@@ -89,8 +89,12 @@ describe("translator drawer", () => {
     selectText(source.firstChild!, 0, 6);
     source.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
+    const result = document.querySelector<HTMLElement>("[data-role='drawer-result']")!;
+    selectText(result.firstChild!, 0, 10);
+    result.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
     const terms = Array.from(document.querySelectorAll("[data-role='highlighted-term-label']")).map((node) => node.textContent);
-    expect(terms).toEqual([]);
+    expect(terms).toEqual(["source", "translated"]);
   });
 
   test("renders loading and error states", () => {

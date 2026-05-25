@@ -70,13 +70,20 @@ function renderTranslatedDrawer(drawer: HTMLElement, options: TranslatorDrawerOp
 
   const sourceSection = textSection("원문", "drawer-source", sourceText || "원문 정보가 없습니다.");
   const result = textSection("번역문", "drawer-result", options.text);
+  sourceSection.addEventListener("mouseup", () => {
+    addSelectedTerm(sourceSection);
+  });
   result.addEventListener("mouseup", () => {
+    addSelectedTerm(result);
+  });
+
+  function addSelectedTerm(container: HTMLElement): void {
     const selected = window.getSelection()?.toString().trim();
-    if (!selected || !result.textContent?.includes(selected)) return;
+    if (!selected || !container.textContent?.includes(selected)) return;
     if (terms.some((term) => term.term === selected)) return;
     terms.push({ id: createId("term"), term: selected });
     renderTerms();
-  });
+  }
 
   const actions = row([
     createButton("복사", "copy", () => void navigator.clipboard?.writeText(options.text)),

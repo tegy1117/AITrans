@@ -175,14 +175,25 @@ export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState,
         state.selectionResultDisplayMode,
         ["drawer", "bubble"],
         (value) => {
-          state = { ...state, selectionResultDisplayMode: value as SelectionResultDisplayMode };
-          render();
+          void saveDisplayMode(value as SelectionResultDisplayMode);
         },
         selectionResultDisplayModeLabel
       ),
       helpText("사이드바는 원문과 번역문을 함께 보여주고, 하단 번역창은 선택 위치 근처에 작은 결과창을 띄웁니다.")
     );
     return panel;
+  }
+
+  async function saveDisplayMode(selectionResultDisplayMode: SelectionResultDisplayMode): Promise<void> {
+    const nextState = { ...state, selectionResultDisplayMode };
+    state = nextState;
+    try {
+      await callbacks.onSave(nextState);
+      statusMessage = "표시 방식을 저장했습니다.";
+    } catch (error) {
+      statusMessage = error instanceof Error ? error.message : String(error);
+    }
+    render();
   }
 
   function renderProviderEditor(): HTMLElement {
