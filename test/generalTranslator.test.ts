@@ -23,6 +23,10 @@ describe("general translator UI", () => {
       onClearHistory: vi.fn()
     });
 
+    expect(root.querySelector("[data-role='general-translator']")?.classList.contains("translator-shell")).toBe(true);
+    expect(root.querySelector("[data-role='general-board']")).toBeDefined();
+    expect(root.querySelectorAll(".translator-panel")).toHaveLength(2);
+
     root.querySelector<HTMLButtonElement>("[data-action='general-translate']")?.click();
     await Promise.resolve();
     await Promise.resolve();

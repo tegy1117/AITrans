@@ -57,7 +57,7 @@ function applyDrawerStyle(drawer: HTMLElement): void {
   drawer.style.zIndex = "2147483647";
   drawer.style.top = "0";
   drawer.style.right = "0";
-  drawer.style.width = "420px";
+  drawer.style.width = "560px";
   drawer.style.maxWidth = "calc(100vw - 16px)";
   drawer.style.height = "100vh";
   drawer.style.overflow = "auto";
