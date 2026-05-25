@@ -1,6 +1,7 @@
 # AI 번역 확장 프로그램
 
 Chrome/Edge Manifest V3 기반 AI 페이지/선택 영역 번역 확장 프로그램입니다.
+현 언어 한국어만 지원중이며, 나중에 다른언어 추가 예정입니다.
 
 ## 기능
 
@@ -23,8 +24,6 @@ npm.cmd test
 npm.cmd run build
 ```
 
-`dist/`는 빌드 산출물이므로 Git에 포함하지 않습니다. 새 환경에서는 위 명령으로 다시 생성합니다.
-
 ## Chrome 또는 Edge에 로드하기
 
 1. `npm.cmd run build`를 실행합니다.
@@ -33,4 +32,6 @@ npm.cmd run build
 4. "Load unpacked" 또는 "압축해제된 확장 프로그램 로드"를 선택합니다.
 5. `E:\AI Trans\dist` 폴더를 선택합니다.
 
-확장 프로그램 옵션 페이지에서 프로바이더, API 키, 기본 URL, 모델, 프롬프트를 설정합니다. Ollama 로컬 기본 URL은 `http://localhost:11434`입니다.
+확장 프로그램 옵션 페이지에서 프로바이더, API 키, 기본 URL, 모델, 프롬프트를 설정합니다.
+
+조만간 릴리즈 하면 zip파일로 바로 적용 가능한 파일 형태로 만들겠습니다.
