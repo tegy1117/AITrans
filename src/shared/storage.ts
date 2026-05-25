@@ -2,7 +2,7 @@ import type { ExtensionState, ProfilePurpose, PromptProfile } from "./types";
 
 export const STORAGE_KEY = "aiTranslationExtensionState";
 
-const PURPOSES: ProfilePurpose[] = ["page", "selection", "image", "dictionary", "dictionary-source", "general"];
+const PURPOSES: ProfilePurpose[] = ["page", "selection", "image", "dictionary", "dictionary-source", "general", "youtube-caption"];
 const MAX_TRANSLATION_HISTORY = 100;
 
 export function createDefaultState(): ExtensionState {
@@ -25,7 +25,8 @@ export function createDefaultState(): ExtensionState {
     translationHistory: [],
     selectionModeEnabled: false,
     selectionResultDisplayMode: "drawer",
-    generalTranslatorDisplayMode: "drawer"
+    generalTranslatorDisplayMode: "drawer",
+    youtubeCaptionPosition: "below"
   };
 }
 
@@ -45,7 +46,8 @@ export function normalizeState(input: Partial<ExtensionState> | undefined | null
     translationHistory: normalizeTranslationHistory(input?.translationHistory, promptProfiles),
     selectionModeEnabled: input?.selectionModeEnabled ?? false,
     selectionResultDisplayMode: input?.selectionResultDisplayMode === "bubble" ? "bubble" : "drawer",
-    generalTranslatorDisplayMode: normalizeGeneralTranslatorDisplayMode(input?.generalTranslatorDisplayMode)
+    generalTranslatorDisplayMode: normalizeGeneralTranslatorDisplayMode(input?.generalTranslatorDisplayMode),
+    youtubeCaptionPosition: input?.youtubeCaptionPosition === "above" ? "above" : "below"
   };
 }
 
@@ -108,6 +110,12 @@ function createDefaultPromptProfiles(): PromptProfile[] {
       "general",
       "일반 번역",
       "다음 텍스트를 자연스러운 한국어로 번역해줘. 원문의 의미와 어조를 유지해줘.\n\n{{content}}"
+    ),
+    createProfile(
+      "youtube-caption-default",
+      "youtube-caption",
+      "유튜브 자막 번역",
+      "다음 번호가 붙은 유튜브 자막을 자연스러운 한국어로 번역해줘.\n번호와 줄 수를 반드시 유지하고, 각 줄에는 번역문만 써줘.\n\n{{content}}"
     ),
     createProfile(
       "dictionary-default",

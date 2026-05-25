@@ -11,11 +11,29 @@ describe("storage state", () => {
       "general",
       "image",
       "page",
-      "selection"
+      "selection",
+      "youtube-caption"
     ]);
     expect(state.selectionResultDisplayMode).toBe("drawer");
     expect(state.generalTranslatorDisplayMode).toBe("drawer");
+    expect(state.youtubeCaptionPosition).toBe("below");
     expect(state.translationHistory).toEqual([]);
+  });
+
+  test("adds missing youtube caption profile and position when normalizing older state", () => {
+    const oldState = createDefaultState();
+    const normalized = normalizeState({
+      promptProfiles: oldState.promptProfiles.filter((profile) => profile.purpose !== "youtube-caption")
+    });
+
+    expect(normalized.promptProfiles.some((profile) => profile.id === "youtube-caption-default")).toBe(true);
+    expect(normalized.activeProfileByPurpose["youtube-caption"]).toBe("youtube-caption-default");
+    expect(normalized.youtubeCaptionPosition).toBe("below");
+  });
+
+  test("preserves persisted youtube caption position", () => {
+    expect(normalizeState({ youtubeCaptionPosition: "above" }).youtubeCaptionPosition).toBe("above");
+    expect(normalizeState({ youtubeCaptionPosition: "below" }).youtubeCaptionPosition).toBe("below");
   });
 
   test("creates separate active profiles for source and translated dictionary terms", () => {
@@ -115,7 +133,8 @@ describe("storage state", () => {
         image: "image-default",
         dictionary: "dictionary-default",
         "dictionary-source": "dictionary-source-default",
-        general: "general-default"
+        general: "general-default",
+        "youtube-caption": "youtube-caption-default"
       }
     });
 

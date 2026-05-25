@@ -10,6 +10,7 @@ import type {
   ProviderType,
   SelectionResultDisplayMode,
   GeneralTranslatorDisplayMode,
+  YouTubeCaptionPosition,
   ReasoningEffort
 } from "../shared/types";
 import { validatePromptMessages } from "./promptValidation";
@@ -26,7 +27,7 @@ import {
 } from "./stateEditor";
 
 const providerTypes: ProviderType[] = ["openai", "claude", "gemini", "ollama-local", "ollama-cloud", "custom-openai-compatible"];
-const purposes: ProfilePurpose[] = ["page", "selection", "general", "image", "dictionary-source", "dictionary"];
+const purposes: ProfilePurpose[] = ["page", "selection", "general", "youtube-caption", "image", "dictionary-source", "dictionary"];
 const roles: MessageRole[] = ["system", "user", "assistant"];
 const reasoningEfforts: ReasoningEffort[] = ["minimal", "low", "medium", "high"];
 
@@ -189,6 +190,15 @@ export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState,
         },
         generalTranslatorDisplayModeLabel
       ),
+      selectRow(
+        "유튜브 자막 번역 표시 위치",
+        state.youtubeCaptionPosition,
+        ["below", "above"],
+        (value) => {
+          void saveYouTubeCaptionPosition(value as YouTubeCaptionPosition);
+        },
+        youtubeCaptionPositionLabel
+      ),
       helpText("선택 번역은 사이드바나 하단 번역창으로 표시할 수 있고, 일반 번역창은 페이지 안 사이드바나 새 탭으로 열 수 있습니다.")
     );
     return panel;
@@ -212,6 +222,18 @@ export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState,
     try {
       await callbacks.onSave(nextState);
       statusMessage = "일반 번역창 표시 방식을 저장했습니다.";
+    } catch (error) {
+      statusMessage = error instanceof Error ? error.message : String(error);
+    }
+    render();
+  }
+
+  async function saveYouTubeCaptionPosition(youtubeCaptionPosition: YouTubeCaptionPosition): Promise<void> {
+    const nextState = { ...state, youtubeCaptionPosition };
+    state = nextState;
+    try {
+      await callbacks.onSave(nextState);
+      statusMessage = "유튜브 자막 번역 표시 위치를 저장했습니다.";
     } catch (error) {
       statusMessage = error instanceof Error ? error.message : String(error);
     }
@@ -545,6 +567,7 @@ function purposeLabel(purpose: ProfilePurpose): string {
   if (purpose === "page") return "페이지 번역";
   if (purpose === "selection") return "선택 영역 번역";
   if (purpose === "general") return "일반 번역";
+  if (purpose === "youtube-caption") return "유튜브 자막";
   if (purpose === "image") return "이미지 번역";
   if (purpose === "dictionary-source") return "원문 사전";
   return "번역문 사전";
@@ -578,4 +601,8 @@ function selectionResultDisplayModeLabel(value: string): string {
 
 function generalTranslatorDisplayModeLabel(value: string): string {
   return value === "tab" ? "새 탭" : "사이드바";
+}
+
+function youtubeCaptionPositionLabel(value: string): string {
+  return value === "above" ? "원문 위" : "원문 아래";
 }

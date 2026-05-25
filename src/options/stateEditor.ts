@@ -137,6 +137,14 @@ function defaultMessagesFor(purpose: ProfilePurpose): PromptMessage[] {
       }
     ];
   }
+  if (purpose === "youtube-caption") {
+    return [
+      {
+        role: "user",
+        content: "다음 번호가 붙은 유튜브 자막을 자연스러운 한국어로 번역해줘.\n번호와 줄 수를 반드시 유지하고, 각 줄에는 번역문만 써줘.\n\n{{content}}"
+      }
+    ];
+  }
   if (purpose === "image") return [{ role: "user", content: "첨부된 이미지에서 읽을 수 있는 텍스트를 한국어로 번역해줘.\n\n추가 지시:\n{{content}}" }];
   return [{ role: "user", content: "{{content}}" }];
 }
@@ -145,6 +153,7 @@ function purposeLabel(purpose: ProfilePurpose): string {
   if (purpose === "page") return "페이지 번역";
   if (purpose === "selection") return "선택 영역 번역";
   if (purpose === "general") return "일반 번역";
+  if (purpose === "youtube-caption") return "유튜브 자막";
   if (purpose === "image") return "이미지 번역";
   if (purpose === "dictionary-source") return "원문 사전";
   return "번역문 사전";

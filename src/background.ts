@@ -5,7 +5,7 @@ import type { BackgroundRequest, BackgroundResponse, ExtensionState, ProfilePurp
 import { createContextMenuClickHandler, createTranslationContextMenus, sendTabMessage } from "./background/contextMenus";
 import { fetchImagePayload } from "./background/images";
 import { openGeneralTranslatorSurface } from "./background/generalTranslatorOpen";
-import { installBackgroundRuntimeErrorGuard } from "./background/runtimeErrors";
+import { installBackgroundRuntimeErrorGuard, isMissingReceiverRejection } from "./background/runtimeErrors";
 
 installBackgroundRuntimeErrorGuard();
 
@@ -76,6 +76,22 @@ async function handleMessage(request: BackgroundRequest, sender?: chrome.runtime
   if (request.type === "openGeneralTranslator") {
     await openGeneralTranslator(request.sourceText ?? "", request.translatedText ?? "", sender);
     return { ok: true };
+  }
+
+  if (request.type === "getYouTubeCaptionTracks") {
+    return sendTabRequest(request.tabId, { type: "getYouTubeCaptionTracks" });
+  }
+
+  if (request.type === "startYouTubeCaptionTranslation") {
+    return sendTabRequest(request.tabId, { type: "startYouTubeCaptionTranslation", trackId: request.trackId });
+  }
+
+  if (request.type === "stopYouTubeCaptionTranslation") {
+    return sendTabRequest(request.tabId, { type: "stopYouTubeCaptionTranslation" });
+  }
+
+  if (request.type === "translateYouTubeCaptionBatch") {
+    return { ok: true, text: await translate("youtube-caption", request.content) };
   }
 
   if (request.type === "generateDictionaryEntry") {
@@ -214,4 +230,38 @@ function findActiveProfile(state: ExtensionState, purpose: ProfilePurpose) {
   const profile = state.promptProfiles.find((candidate) => candidate.id === profileId);
   if (!profile) throw new Error(`No active ${purpose} prompt profile is configured.`);
   return profile;
+}
+
+async function sendTabRequest(tabId: number, message: unknown): Promise<BackgroundResponse> {
+  const response = await sendTabRequestOnce(tabId, message);
+  if (response.ok || !isMissingReceiverRejection(response.error)) return response;
+
+  const injection = await injectContentScript(tabId);
+  if (!injection.ok) return injection;
+  return sendTabRequestOnce(tabId, message);
+}
+
+function sendTabRequestOnce(tabId: number, message: unknown): Promise<BackgroundResponse> {
+  return new Promise((resolve) => {
+    chrome.tabs.sendMessage(tabId, message, (response: BackgroundResponse | undefined) => {
+      const error = chrome.runtime.lastError;
+      if (error) {
+        resolve({ ok: false, error: error.message ?? "탭과 연결할 수 없습니다." });
+        return;
+      }
+      resolve(response ?? { ok: false, error: "탭에서 응답이 반환되지 않았습니다." });
+    });
+  });
+}
+
+async function injectContentScript(tabId: number): Promise<BackgroundResponse> {
+  try {
+    await chrome.scripting.executeScript({ target: { tabId }, files: ["contentScript.js"] });
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "이 페이지에서는 확장 프로그램 content script를 실행할 수 없습니다."
+    };
+  }
 }

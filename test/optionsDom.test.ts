@@ -110,4 +110,26 @@ describe("options DOM app", () => {
     expect(onSave).toHaveBeenCalledOnce();
     expect(onSave.mock.calls[0]?.[0].generalTranslatorDisplayMode).toBe("tab");
   });
+
+  test("saves youtube caption position immediately when changed", async () => {
+    const root = document.createElement("div");
+    document.body.append(root);
+    const onSave = vi.fn<(state: ExtensionState) => Promise<void>>(async () => undefined);
+    const state = createDefaultState();
+
+    mountOptionsApp(root, state, { onSave });
+
+    const select = Array.from(root.querySelectorAll("label")).find((label) =>
+      label.textContent?.includes("유튜브 자막 번역 표시 위치")
+    )?.querySelector("select");
+    expect(select).toBeDefined();
+
+    select!.value = "above";
+    select!.dispatchEvent(new Event("change"));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(onSave).toHaveBeenCalledOnce();
+    expect(onSave.mock.calls[0]?.[0].youtubeCaptionPosition).toBe("above");
+  });
 });
