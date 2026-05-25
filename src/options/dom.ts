@@ -38,20 +38,32 @@ export interface OptionsApp {
 }
 
 export interface OptionsAppCallbacks {
-  onSave(state: ExtensionState): Promise<void>;
+  onSave(state: ExtensionState): Promise<ExtensionState | void>;
   onDeleteDictionaryEntry?(id: string, state: ExtensionState): Promise<ExtensionState>;
 }
 
+const UNSAVED_CHANGES_MESSAGE = "저장하지 않은 변경사항이 있습니다. 저장하거나 변경 취소 후 이동하세요.";
+
 export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState, callbacks: OptionsAppCallbacks): OptionsApp {
   let state = initialState;
+  let savedState = initialState;
   let selectedProviderId = state.providerConfigs[0]?.id ?? "";
   let selectedPurpose: ProfilePurpose = "page";
   let selectedProfileId = state.activeProfileByPurpose[selectedPurpose] || state.promptProfiles.find((profile) => profile.purpose === selectedPurpose)?.id || "";
   let statusMessage = "";
+  let isDirty = false;
+
+  window.addEventListener("beforeunload", (event) => {
+    if (!isDirty) return;
+    event.preventDefault();
+    event.returnValue = "";
+  });
 
   const app: OptionsApp = {
     setState(next) {
       state = next;
+      savedState = next;
+      isDirty = false;
       selectedProviderId = state.providerConfigs.some((provider) => provider.id === selectedProviderId)
         ? selectedProviderId
         : state.providerConfigs[0]?.id ?? "";
@@ -89,6 +101,7 @@ export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState,
       state = addProvider(state, provider);
       selectedProviderId = provider.id;
       statusMessage = "프로바이더를 추가했습니다.";
+      markDirty();
       render();
     }));
 
@@ -104,6 +117,7 @@ export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState,
       state = addProfile(state, profile);
       selectedProfileId = profile.id;
       statusMessage = "프로필을 추가했습니다.";
+      markDirty();
       render();
     }));
     return sidebar;
@@ -113,6 +127,7 @@ export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState,
     const list = element("div", "stack");
     for (const provider of state.providerConfigs) {
       const button = actionButton(provider.name, () => {
+        if (!guardUnsavedNavigation()) return;
         selectedProviderId = provider.id;
         statusMessage = "";
         render();
@@ -127,6 +142,7 @@ export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState,
     const wrapper = element("div", "segmented");
     for (const purpose of purposes) {
       const button = actionButton(purposeLabel(purpose), () => {
+        if (!guardUnsavedNavigation()) return;
         selectedPurpose = purpose;
         selectedProfileId = resolveSelectedProfileId(state, purpose, state.activeProfileByPurpose[purpose]);
         statusMessage = "";
@@ -144,6 +160,7 @@ export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState,
     for (const profile of profiles) {
       const label = profile.id === state.activeProfileByPurpose[selectedPurpose] ? `${profile.name} *` : profile.name;
       const button = actionButton(label, () => {
+        if (!guardUnsavedNavigation()) return;
         selectedProfileId = profile.id;
         statusMessage = "";
         render();
@@ -156,15 +173,16 @@ export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState,
 
   function renderEditor(): HTMLElement {
     const editor = element("section", "settings-editor");
-    editor.append(renderDisplaySettings(), renderProviderEditor(), renderProfileEditor(), renderDictionaryEntries(), actionButton("전체 설정 저장", async () => {
-      try {
-        await callbacks.onSave(state);
-        statusMessage = "저장했습니다.";
-      } catch (error) {
-        statusMessage = error instanceof Error ? error.message : String(error);
-      }
-      render();
-    }));
+    editor.append(
+      renderDisplaySettings(),
+      renderProviderEditor(),
+      renderProfileEditor(),
+      renderDictionaryEntries(),
+      row([
+        actionButton("전체 설정 저장", saveAllSettings),
+        actionButton("변경 취소", cancelUnsavedChanges, !isDirty)
+      ])
+    );
     return editor;
   }
 
@@ -205,39 +223,15 @@ export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState,
   }
 
   async function saveDisplayMode(selectionResultDisplayMode: SelectionResultDisplayMode): Promise<void> {
-    const nextState = { ...state, selectionResultDisplayMode };
-    state = nextState;
-    try {
-      await callbacks.onSave(nextState);
-      statusMessage = "표시 방식을 저장했습니다.";
-    } catch (error) {
-      statusMessage = error instanceof Error ? error.message : String(error);
-    }
-    render();
+    await saveImmediateSetting({ selectionResultDisplayMode }, "표시 방식을 저장했습니다.");
   }
 
   async function saveGeneralTranslatorDisplayMode(generalTranslatorDisplayMode: GeneralTranslatorDisplayMode): Promise<void> {
-    const nextState = { ...state, generalTranslatorDisplayMode };
-    state = nextState;
-    try {
-      await callbacks.onSave(nextState);
-      statusMessage = "일반 번역창 표시 방식을 저장했습니다.";
-    } catch (error) {
-      statusMessage = error instanceof Error ? error.message : String(error);
-    }
-    render();
+    await saveImmediateSetting({ generalTranslatorDisplayMode }, "일반 번역창 표시 방식을 저장했습니다.");
   }
 
   async function saveYouTubeCaptionPosition(youtubeCaptionPosition: YouTubeCaptionPosition): Promise<void> {
-    const nextState = { ...state, youtubeCaptionPosition };
-    state = nextState;
-    try {
-      await callbacks.onSave(nextState);
-      statusMessage = "유튜브 자막 번역 표시 위치를 저장했습니다.";
-    } catch (error) {
-      statusMessage = error instanceof Error ? error.message : String(error);
-    }
-    render();
+    await saveImmediateSetting({ youtubeCaptionPosition }, "유튜브 자막 번역 표시 위치를 저장했습니다.");
   }
 
   function renderProviderEditor(): HTMLElement {
@@ -260,6 +254,7 @@ export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState,
           state = deleteProvider(state, provider.id);
           selectedProviderId = state.providerConfigs[0]?.id ?? "";
           statusMessage = "프로바이더를 삭제했습니다.";
+          markDirty();
         } catch (error) {
           statusMessage = error instanceof Error ? error.message : String(error);
         }
@@ -306,11 +301,13 @@ export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState,
     details.append(summary, source);
 
     const deleteButton = dangerButton("삭제", async () => {
+      if (!guardUnsavedNavigation()) return;
       if (callbacks.onDeleteDictionaryEntry) {
         state = await callbacks.onDeleteDictionaryEntry(entry.id, state);
       } else {
         state = { ...state, dictionaryEntries: state.dictionaryEntries.filter((candidate) => candidate.id !== entry.id) };
       }
+      savedState = state;
       statusMessage = "사전 항목을 삭제했습니다.";
       render();
     });
@@ -341,6 +338,7 @@ export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState,
       actionButton("이 기능의 기본 프로필로 설정", () => {
         state = setActiveProfile(state, profile.purpose, profile.id);
         statusMessage = `${profile.name} 프로필을 ${purposeLabel(profile.purpose)} 기본값으로 설정했습니다.`;
+        markDirty();
         render();
       }),
       actionButton("프로필 복제", () => {
@@ -348,6 +346,7 @@ export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState,
         state = duplicateProfile(state, profile.id, id);
         selectedProfileId = id;
         statusMessage = "프로필을 복제했습니다.";
+        markDirty();
         render();
       }),
       dangerButton("프로필 삭제", () => {
@@ -355,6 +354,7 @@ export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState,
           state = deleteProfile(state, profile.id);
           selectedProfileId = resolveSelectedProfileId(state, selectedPurpose, state.activeProfileByPurpose[selectedPurpose]);
           statusMessage = "프로필을 삭제했습니다.";
+          markDirty();
         } catch (error) {
           statusMessage = error instanceof Error ? error.message : String(error);
         }
@@ -402,7 +402,7 @@ export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState,
     });
     wrapper.append(
       actionButton("메시지 추가", () => {
-        updateSelectedProfile({ messages: [...profile.messages, { role: "user", content: "" }] });
+        updateSelectedProfile({ messages: [...profile.messages, { role: "user", content: "" }] }, true);
       })
     );
     const validation = validatePromptMessages(profile.purpose, profile.messages);
@@ -410,14 +410,55 @@ export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState,
     return wrapper;
   }
 
-  function updateSelectedProvider(patch: Partial<ProviderConfig>): void {
-    state = updateProvider(state, selectedProviderId, patch);
+  async function saveAllSettings(): Promise<void> {
+    try {
+      const saved = await callbacks.onSave(state);
+      state = saved ?? state;
+      savedState = state;
+      isDirty = false;
+      statusMessage = "저장했습니다.";
+    } catch (error) {
+      statusMessage = error instanceof Error ? error.message : String(error);
+    }
     render();
   }
 
-  function updateSelectedProfile(patch: Partial<PromptProfile>): void {
-    state = updateProfile(state, selectedProfileId, patch);
+  function cancelUnsavedChanges(): void {
+    state = savedState;
+    isDirty = false;
+    selectedProviderId = state.providerConfigs.some((provider) => provider.id === selectedProviderId)
+      ? selectedProviderId
+      : state.providerConfigs[0]?.id ?? "";
+    selectedProfileId = resolveSelectedProfileId(state, selectedPurpose, selectedProfileId);
+    statusMessage = "변경사항을 취소했습니다.";
     render();
+  }
+
+  async function saveImmediateSetting(patch: Partial<ExtensionState>, successMessage: string): Promise<void> {
+    const previousState = state;
+    const previousSavedState = savedState;
+    state = { ...state, ...patch };
+    const nextSavedState = { ...savedState, ...patch };
+    try {
+      const saved = await callbacks.onSave(nextSavedState);
+      savedState = saved ?? nextSavedState;
+      statusMessage = successMessage;
+    } catch (error) {
+      state = previousState;
+      savedState = previousSavedState;
+      statusMessage = error instanceof Error ? error.message : String(error);
+    }
+    render();
+  }
+
+  function updateSelectedProvider(patch: Partial<ProviderConfig>, shouldRender = false): void {
+    state = updateProvider(state, selectedProviderId, patch);
+    markDirty(shouldRender);
+  }
+
+  function updateSelectedProfile(patch: Partial<PromptProfile>, shouldRender = false): void {
+    state = updateProfile(state, selectedProfileId, patch);
+    markDirty(shouldRender);
   }
 
   function updateParameter(key: keyof GenerationParameters, value: GenerationParameters[keyof GenerationParameters]): void {
@@ -438,13 +479,43 @@ export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState,
     const next = [...profile.messages];
     const target = index + direction;
     [next[index], next[target]] = [next[target], next[index]];
-    updateSelectedProfile({ messages: next });
+    updateSelectedProfile({ messages: next }, true);
   }
 
   function deleteMessage(index: number): void {
     const profile = state.promptProfiles.find((candidate) => candidate.id === selectedProfileId);
     if (!profile || profile.messages.length === 1) return;
-    updateSelectedProfile({ messages: profile.messages.filter((_message, candidateIndex) => candidateIndex !== index) });
+    updateSelectedProfile({ messages: profile.messages.filter((_message, candidateIndex) => candidateIndex !== index) }, true);
+  }
+
+  function markDirty(shouldRender = false): void {
+    isDirty = true;
+    statusMessage = "저장하지 않은 변경사항이 있습니다.";
+    if (shouldRender) {
+      render();
+      return;
+    }
+    updateDirtyControls();
+    updateStatusElement();
+  }
+
+  function guardUnsavedNavigation(): boolean {
+    if (!isDirty) return true;
+    statusMessage = UNSAVED_CHANGES_MESSAGE;
+    updateStatusElement();
+    window.alert(UNSAVED_CHANGES_MESSAGE);
+    return false;
+  }
+
+  function updateStatusElement(): void {
+    const status = root.querySelector<HTMLElement>("#status");
+    if (status) status.textContent = statusMessage;
+  }
+
+  function updateDirtyControls(): void {
+    for (const button of Array.from(root.querySelectorAll<HTMLButtonElement>("button"))) {
+      if (button.textContent === "변경 취소") button.disabled = !isDirty;
+    }
   }
 }
 

@@ -41,6 +41,96 @@ describe("options DOM app", () => {
     ]);
   });
 
+  test("keeps the active prompt textarea while editing and only persists on save", async () => {
+    const root = document.createElement("div");
+    document.body.append(root);
+    const onSave = vi.fn<(state: ExtensionState) => Promise<void>>(async () => undefined);
+    const state = createDefaultState();
+
+    const app = mountOptionsApp(root, state, { onSave });
+    const textarea = root.querySelector<HTMLTextAreaElement>("textarea");
+    expect(textarea).toBeDefined();
+
+    textarea!.value = "수정한 프롬프트 {{content}}";
+    textarea!.dispatchEvent(new Event("input", { bubbles: true }));
+
+    expect(root.querySelector("textarea")).toBe(textarea);
+    expect(onSave).not.toHaveBeenCalled();
+    expect(app.getState().promptProfiles.find((profile) => profile.id === "page-default")?.messages[0]?.content).toBe(
+      "수정한 프롬프트 {{content}}"
+    );
+
+    Array.from(root.querySelectorAll("button"))
+      .find((button) => button.textContent === "전체 설정 저장")
+      ?.click();
+    await Promise.resolve();
+
+    expect(onSave).toHaveBeenCalledOnce();
+    expect(onSave.mock.calls[0]?.[0].promptProfiles.find((profile) => profile.id === "page-default")?.messages[0]?.content).toBe(
+      "수정한 프롬프트 {{content}}"
+    );
+  });
+
+  test("blocks internal profile navigation while prompt changes are unsaved", () => {
+    const root = document.createElement("div");
+    document.body.append(root);
+    const onSave = vi.fn<(state: ExtensionState) => Promise<void>>(async () => undefined);
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => undefined);
+
+    mountOptionsApp(root, createDefaultState(), { onSave });
+    const textarea = root.querySelector<HTMLTextAreaElement>("textarea");
+    textarea!.value = "수정한 프롬프트 {{content}}";
+    textarea!.dispatchEvent(new Event("input", { bubbles: true }));
+
+    const selectionPurposeButton = Array.from(root.querySelectorAll("button")).find((button) => button.textContent === "선택 영역 번역");
+    selectionPurposeButton?.click();
+
+    expect(alertSpy).toHaveBeenCalledWith("저장하지 않은 변경사항이 있습니다. 저장하거나 변경 취소 후 이동하세요.");
+    expect(selectionPurposeButton?.classList.contains("selected")).toBe(false);
+
+    alertSpy.mockRestore();
+  });
+
+  test("cancels unsaved prompt changes and allows navigation afterward", () => {
+    const root = document.createElement("div");
+    document.body.append(root);
+    const onSave = vi.fn<(state: ExtensionState) => Promise<void>>(async () => undefined);
+
+    mountOptionsApp(root, createDefaultState(), { onSave });
+    const textarea = root.querySelector<HTMLTextAreaElement>("textarea");
+    const originalValue = textarea!.value;
+    textarea!.value = "수정한 프롬프트 {{content}}";
+    textarea!.dispatchEvent(new Event("input", { bubbles: true }));
+
+    Array.from(root.querySelectorAll("button"))
+      .find((button) => button.textContent === "변경 취소")
+      ?.click();
+
+    expect(root.querySelector<HTMLTextAreaElement>("textarea")?.value).toBe(originalValue);
+
+    const selectionPurposeButton = Array.from(root.querySelectorAll("button")).find((button) => button.textContent === "선택 영역 번역");
+    selectionPurposeButton?.click();
+
+    const selectedSelectionPurposeButton = Array.from(root.querySelectorAll("button")).find((button) => button.textContent === "선택 영역 번역");
+    expect(selectedSelectionPurposeButton?.classList.contains("selected")).toBe(true);
+  });
+
+  test("prevents browser navigation while prompt changes are unsaved", () => {
+    const root = document.createElement("div");
+    document.body.append(root);
+    const onSave = vi.fn<(state: ExtensionState) => Promise<void>>(async () => undefined);
+
+    mountOptionsApp(root, createDefaultState(), { onSave });
+    const textarea = root.querySelector<HTMLTextAreaElement>("textarea");
+    textarea!.value = "수정한 프롬프트 {{content}}";
+    textarea!.dispatchEvent(new Event("input", { bubbles: true }));
+
+    const event = new Event("beforeunload", { cancelable: true });
+    const prevented = !window.dispatchEvent(event);
+
+    expect(prevented).toBe(true);
+  });
+
   test("renders saved dictionary entries and deletes them", async () => {
     const root = document.createElement("div");
     document.body.append(root);

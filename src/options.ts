@@ -18,7 +18,7 @@ async function initialize(): Promise<void> {
       }
       const saveResponse = (await chrome.runtime.sendMessage({ type: "saveState", state })) as BackgroundResponse;
       if (!saveResponse.ok) throw new Error(saveResponse.error);
-      if (saveResponse.state) app.setState(saveResponse.state);
+      return saveResponse.state;
     },
     async onDeleteDictionaryEntry(id, state) {
       const deleteResponse = (await chrome.runtime.sendMessage({ type: "deleteDictionaryEntry", id })) as BackgroundResponse;
