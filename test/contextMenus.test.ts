@@ -1,12 +1,17 @@
 import { describe, expect, test, vi } from "vitest";
-import { SELECTION_TRANSLATE_MENU_ID, createSelectionContextMenu, handleSelectionContextMenuClick } from "../src/background/contextMenus";
+import {
+  IMAGE_TRANSLATE_MENU_ID,
+  SELECTION_TRANSLATE_MENU_ID,
+  createTranslationContextMenus,
+  handleTranslationContextMenuClick
+} from "../src/background/contextMenus";
 
-describe("selection context menu", () => {
-  test("creates a browser context menu item for selected text", () => {
+describe("translation context menus", () => {
+  test("creates browser context menu items for selected text and images", () => {
     const create = vi.fn();
     const removeAll = vi.fn((callback: () => void) => callback());
 
-    createSelectionContextMenu({ create, removeAll });
+    createTranslationContextMenus({ create, removeAll });
 
     expect(removeAll).toHaveBeenCalledOnce();
     expect(create).toHaveBeenCalledWith({
@@ -14,12 +19,17 @@ describe("selection context menu", () => {
       title: "선택한 텍스트 AI로 번역",
       contexts: ["selection"]
     });
+    expect(create).toHaveBeenCalledWith({
+      id: IMAGE_TRANSLATE_MENU_ID,
+      title: "이미지 AI로 번역",
+      contexts: ["image"]
+    });
   });
 
   test("sends selected text to the active tab when the menu item is clicked", async () => {
     const sendMessage = vi.fn();
 
-    await handleSelectionContextMenuClick(
+    await handleTranslationContextMenuClick(
       { menuItemId: SELECTION_TRANSLATE_MENU_ID, selectionText: "Hello" },
       { id: 42 },
       sendMessage
@@ -31,17 +41,37 @@ describe("selection context menu", () => {
     });
   });
 
+  test("sends image source URL to the active tab when an image menu item is clicked", async () => {
+    const sendMessage = vi.fn();
+
+    await handleTranslationContextMenuClick(
+      { menuItemId: IMAGE_TRANSLATE_MENU_ID, srcUrl: "https://example.com/image.png" },
+      { id: 42 },
+      sendMessage
+    );
+
+    expect(sendMessage).toHaveBeenCalledWith(42, {
+      type: "translateImageFromContextMenu",
+      imageUrl: "https://example.com/image.png"
+    });
+  });
+
   test("ignores clicks without selected text or tab id", async () => {
     const sendMessage = vi.fn();
 
-    await handleSelectionContextMenuClick(
+    await handleTranslationContextMenuClick(
       { menuItemId: SELECTION_TRANSLATE_MENU_ID },
       { id: 42 },
       sendMessage
     );
-    await handleSelectionContextMenuClick(
+    await handleTranslationContextMenuClick(
       { menuItemId: SELECTION_TRANSLATE_MENU_ID, selectionText: "Hello" },
       {},
+      sendMessage
+    );
+    await handleTranslationContextMenuClick(
+      { menuItemId: IMAGE_TRANSLATE_MENU_ID },
+      { id: 42 },
       sendMessage
     );
 

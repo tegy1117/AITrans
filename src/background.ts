@@ -2,19 +2,20 @@ import { renderPrompt } from "./shared/prompt";
 import { translateWithProvider } from "./shared/providers";
 import { loadState, saveState } from "./shared/storage";
 import type { BackgroundRequest, BackgroundResponse, ExtensionState, ProfilePurpose } from "./shared/types";
-import { createSelectionContextMenu, handleSelectionContextMenuClick } from "./background/contextMenus";
+import { createTranslationContextMenus, handleTranslationContextMenuClick } from "./background/contextMenus";
+import { fetchImagePayload } from "./background/images";
 
 chrome.runtime.onInstalled.addListener(async () => {
   await loadState();
-  createSelectionContextMenu();
+  createTranslationContextMenus();
 });
 
 chrome.runtime.onStartup.addListener(() => {
-  createSelectionContextMenu();
+  createTranslationContextMenus();
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  void handleSelectionContextMenuClick(info, tab);
+  void handleTranslationContextMenuClick(info, tab);
 });
 
 chrome.runtime.onMessage.addListener((request: BackgroundRequest, _sender, sendResponse) => {
@@ -43,6 +44,10 @@ async function handleMessage(request: BackgroundRequest): Promise<BackgroundResp
 
   if (request.type === "translateSelection") {
     return { ok: true, text: await translate("selection", request.text) };
+  }
+
+  if (request.type === "translateImage") {
+    return { ok: true, text: await translateImage(request.imageUrl) };
   }
 
   if (request.type === "generateDictionaryEntry") {
@@ -83,6 +88,22 @@ async function translate(purpose: ProfilePurpose, content: string): Promise<stri
   if (!provider) throw new Error(`Provider ${profile.providerId} is not configured.`);
 
   const prompt = renderPrompt(profile, { content });
+  return translateWithProvider(provider, prompt);
+}
+
+async function translateImage(imageUrl: string): Promise<string> {
+  if (!imageUrl.trim()) throw new Error("번역할 이미지 URL이 없습니다.");
+
+  const state = await loadState();
+  const profile = findActiveProfile(state, "image");
+  const provider = state.providerConfigs.find((config) => config.id === profile.providerId);
+  if (!provider) throw new Error(`Provider ${profile.providerId} is not configured.`);
+
+  const image = await fetchImagePayload(imageUrl);
+  const prompt = {
+    ...renderPrompt(profile, { content: "이미지에서 읽을 수 있는 텍스트를 자연스러운 한국어로 번역해 주세요." }),
+    image
+  };
   return translateWithProvider(provider, prompt);
 }
 

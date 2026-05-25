@@ -127,6 +127,7 @@ function withProviderDefaults(provider: ProviderConfig): ProviderConfig {
 
 function defaultMessagesFor(purpose: ProfilePurpose): PromptMessage[] {
   if (purpose === "dictionary") return [{ role: "user", content: "{{dict content}} 단어를 한국어 사전 항목으로 설명해줘.\n\n문맥:\n{{content}}" }];
+  if (purpose === "image") return [{ role: "user", content: "첨부된 이미지에서 읽을 수 있는 텍스트를 한국어로 번역해줘.\n\n추가 지시:\n{{content}}" }];
   return [{ role: "user", content: "{{content}}" }];
 }
 

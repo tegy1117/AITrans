@@ -39,6 +39,13 @@ export interface RenderedPrompt {
   model: string;
   parameters: GenerationParameters;
   messages: PromptMessage[];
+  image?: ProviderImagePayload;
+}
+
+export interface ProviderImagePayload {
+  dataUrl: string;
+  mimeType: string;
+  base64: string;
 }
 
 export interface ProviderConfig {
@@ -68,6 +75,7 @@ export interface ExtensionState {
 export type BackgroundRequest =
   | { type: "translatePage"; texts: string[] }
   | { type: "translateSelection"; text: string }
+  | { type: "translateImage"; imageUrl: string }
   | { type: "generateDictionaryEntry"; term: string; sourceText: string }
   | { type: "saveDictionaryEntry"; entry: DictionaryEntry }
   | { type: "deleteDictionaryEntry"; id: string }

@@ -66,4 +66,20 @@ describe("selection bubble", () => {
 
     expect(document.querySelector("[data-ai-translator-bubble]")).toBeNull();
   });
+
+  test("renders image translation loading and error states", () => {
+    showSelectionBubble({
+      anchor: new DOMRect(10, 10, 0, 0),
+      state: "loading",
+      text: ""
+    });
+    expect(document.body.textContent).toContain("번역 중...");
+
+    showSelectionBubble({
+      anchor: new DOMRect(10, 10, 0, 0),
+      state: "error",
+      text: "이미지 번역에 실패했습니다."
+    });
+    expect(document.body.textContent).toContain("이미지 번역에 실패했습니다.");
+  });
 });

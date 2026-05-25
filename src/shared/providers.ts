@@ -1,4 +1,4 @@
-import type { ProviderConfig, RenderedPrompt } from "./types";
+import type { MessageRole, PromptMessage, ProviderConfig, ProviderImagePayload, RenderedPrompt } from "./types";
 
 export interface ProviderHttpRequest {
   url: string;
@@ -55,7 +55,7 @@ function buildOpenAiCompatibleRequest(
     headers: withBearer(config.apiKey),
     body: {
       model: prompt.model,
-      messages: prompt.messages,
+      messages: buildOpenAiMessages(prompt),
       temperature: prompt.parameters.temperature,
       top_p: prompt.parameters.topP,
       max_tokens: prompt.parameters.maxTokens,
@@ -71,7 +71,7 @@ function buildOllamaRequest(config: ProviderConfig, prompt: RenderedPrompt): Pro
     headers: { "Content-Type": "application/json" },
     body: {
       model: prompt.model,
-      messages: prompt.messages,
+      messages: buildOllamaMessages(prompt),
       stream: false,
       options: {
         temperature: prompt.parameters.temperature,
@@ -87,7 +87,7 @@ function buildClaudeRequest(config: ProviderConfig, prompt: RenderedPrompt): Pro
     .filter((message) => message.role === "system")
     .map((message) => message.content)
     .join("\n\n");
-  const messages = prompt.messages.filter((message) => message.role !== "system");
+  const messages = buildClaudeMessages(prompt);
 
   return {
     url: "https://api.anthropic.com/v1/messages",
@@ -109,12 +109,7 @@ function buildClaudeRequest(config: ProviderConfig, prompt: RenderedPrompt): Pro
 
 function buildGeminiRequest(config: ProviderConfig, prompt: RenderedPrompt): ProviderHttpRequest {
   const apiKey = config.apiKey ?? "";
-  const contents = prompt.messages
-    .filter((message) => message.role !== "system")
-    .map((message) => ({
-      role: message.role === "assistant" ? "model" : "user",
-      parts: [{ text: message.content }]
-    }));
+  const contents = buildGeminiContents(prompt);
   const systemInstruction = prompt.messages.find((message) => message.role === "system")?.content;
 
   return {
@@ -168,6 +163,78 @@ function extractProviderText(config: ProviderConfig, data: unknown): string {
   }
 
   throw new Error("Provider response did not contain translated text.");
+}
+
+function buildOpenAiMessages(prompt: RenderedPrompt): unknown[] {
+  return attachImageToLastUserMessage(prompt.messages, prompt.image, (message, image) => ({
+    role: message.role,
+    content: [
+      { type: "text", text: message.content },
+      { type: "image_url", image_url: { url: image.dataUrl } }
+    ]
+  }));
+}
+
+function buildClaudeMessages(prompt: RenderedPrompt): unknown[] {
+  const messages = prompt.messages.filter((message) => message.role !== "system");
+  return attachImageToLastUserMessage(messages, prompt.image, (message, image) => ({
+    role: message.role,
+    content: [
+      { type: "text", text: message.content },
+      {
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: image.mimeType,
+          data: image.base64
+        }
+      }
+    ]
+  }));
+}
+
+function buildGeminiContents(prompt: RenderedPrompt): unknown[] {
+  const messages = prompt.messages.filter((message) => message.role !== "system");
+  return attachImageToLastUserMessage(messages, prompt.image, (message, image) => ({
+    role: message.role === "assistant" ? "model" : "user",
+    parts: [{ text: message.content }, { inlineData: { mimeType: image.mimeType, data: image.base64 } }]
+  })).map((message) => {
+    if (typeof message === "object" && message !== null && "parts" in message) return message;
+    const promptMessage = message as PromptMessage;
+    return {
+      role: promptMessage.role === "assistant" ? "model" : "user",
+      parts: [{ text: promptMessage.content }]
+    };
+  });
+}
+
+function buildOllamaMessages(prompt: RenderedPrompt): unknown[] {
+  return attachImageToLastUserMessage(prompt.messages, prompt.image, (message, image) => ({
+    ...message,
+    images: [image.base64]
+  }));
+}
+
+function attachImageToLastUserMessage(
+  messages: PromptMessage[],
+  image: ProviderImagePayload | undefined,
+  renderImageMessage: (message: PromptMessage, image: ProviderImagePayload) => unknown
+): unknown[] {
+  if (!image) return messages;
+
+  const lastUserIndex = findLastUserMessageIndex(messages);
+  if (lastUserIndex === -1) {
+    return [...messages, renderImageMessage({ role: "user", content: "" }, image)];
+  }
+
+  return messages.map((message, index) => (index === lastUserIndex ? renderImageMessage(message, image) : message));
+}
+
+function findLastUserMessageIndex(messages: Array<{ role: MessageRole }>): number {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    if (messages[index].role === "user") return index;
+  }
+  return -1;
 }
 
 async function formatProviderHttpError(response: Response): Promise<string> {

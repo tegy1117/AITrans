@@ -60,7 +60,7 @@ function createDefaultPromptProfiles(): PromptProfile[] {
       "선택 영역 번역",
       "선택한 텍스트를 자연스러운 한국어로 번역해줘. 답변은 간결하게 유지해줘.\n\n{{content}}"
     ),
-    createProfile("image-default", "image", "이미지 번역", "이미지에서 추출한 다음 텍스트를 한국어로 번역해줘.\n\n{{content}}"),
+    createProfile("image-default", "image", "이미지 번역", "첨부된 이미지에서 읽을 수 있는 텍스트를 한국어로 번역해줘.\n\n추가 지시:\n{{content}}"),
     createProfile(
       "dictionary-default",
       "dictionary",

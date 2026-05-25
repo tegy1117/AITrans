@@ -14,6 +14,16 @@ const prompt: RenderedPrompt = {
   messages: [{ role: "user", content: "Translate: Hello" }]
 };
 
+const imagePrompt: RenderedPrompt = {
+  ...prompt,
+  messages: [{ role: "user", content: "Translate text in this image." }],
+  image: {
+    dataUrl: "data:image/png;base64,aW1hZ2U=",
+    mimeType: "image/png",
+    base64: "aW1hZ2U="
+  }
+};
+
 describe("provider request builders", () => {
   test("builds OpenAI-compatible chat completions payloads", () => {
     const config: ProviderConfig = {
@@ -51,6 +61,80 @@ describe("provider request builders", () => {
       temperature: 0.3,
       top_p: 0.9,
       messages: [{ role: "user", content: "Translate: Hello" }]
+    });
+  });
+
+  test("adds image payloads to OpenAI-compatible chat completions", () => {
+    const request = buildProviderRequest(
+      {
+        id: "custom",
+        type: "custom-openai-compatible",
+        name: "Custom",
+        apiKey: "key",
+        baseUrl: "https://api.example.com/v1"
+      },
+      imagePrompt
+    );
+
+    expect(request.body).toMatchObject({
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Translate text in this image." },
+            { type: "image_url", image_url: { url: "data:image/png;base64,aW1hZ2U=" } }
+          ]
+        }
+      ]
+    });
+  });
+
+  test("adds image payloads to Claude messages", () => {
+    const request = buildProviderRequest(
+      { id: "claude", type: "claude", name: "Claude", apiKey: "anthropic-key" },
+      imagePrompt
+    );
+
+    expect(request.body).toMatchObject({
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Translate text in this image." },
+            { type: "image", source: { type: "base64", media_type: "image/png", data: "aW1hZ2U=" } }
+          ]
+        }
+      ]
+    });
+  });
+
+  test("adds image payloads to Gemini content parts", () => {
+    const request = buildProviderRequest(
+      { id: "gemini", type: "gemini", name: "Gemini", apiKey: "gemini-key" },
+      imagePrompt
+    );
+
+    expect(request.body).toMatchObject({
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { text: "Translate text in this image." },
+            { inlineData: { mimeType: "image/png", data: "aW1hZ2U=" } }
+          ]
+        }
+      ]
+    });
+  });
+
+  test("adds image payloads to Ollama local chat messages", () => {
+    const request = buildProviderRequest(
+      { id: "ollama", type: "ollama-local", name: "Ollama", baseUrl: "http://localhost:11434" },
+      imagePrompt
+    );
+
+    expect(request.body).toMatchObject({
+      messages: [{ role: "user", content: "Translate text in this image.", images: ["aW1hZ2U="] }]
     });
   });
 
