@@ -3,6 +3,7 @@ import {
   createNumberedCaptionBatches,
   extractCaptionTracksFromPlayerResponse,
   fetchCaptionTracksFromWatchPage,
+  fetchCaptionFragments,
   mergeCaptionFragmentsIntoSentences,
   parseCaptionResponse,
   parseNumberedCaptionResponse,
@@ -59,6 +60,28 @@ describe("YouTube caption helpers", () => {
 
     expect(json).toEqual([{ text: "Hello world.", startMs: 1000, endMs: 2200 }]);
     expect(xml).toEqual([{ text: "Good & nice.", startMs: 1500, endMs: 3500 }]);
+  });
+
+  test("tries json3 caption URL when the original timed text response is empty", async () => {
+    const requestedUrls: string[] = [];
+    const fragments = await fetchCaptionFragments(
+      { id: "en", name: "English", languageCode: "en", baseUrl: "https://www.youtube.com/api/timedtext?v=abc&lang=en" },
+      async (url) => {
+        requestedUrls.push(String(url));
+        if (String(url).includes("fmt=json3")) {
+          return new Response(
+            JSON.stringify({
+              events: [{ tStartMs: 1000, dDurationMs: 1200, segs: [{ utf8: "Hello world." }] }]
+            }),
+            { headers: { "content-type": "application/json" } }
+          );
+        }
+        return new Response("<transcript></transcript>", { headers: { "content-type": "text/xml" } });
+      }
+    );
+
+    expect(requestedUrls[1]).toContain("fmt=json3");
+    expect(fragments).toEqual([{ text: "Hello world.", startMs: 1000, endMs: 2200 }]);
   });
 
   test("merges caption fragments into sentence timed entries", () => {

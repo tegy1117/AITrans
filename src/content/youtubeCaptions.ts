@@ -57,15 +57,33 @@ export function extractCaptionTracksFromPlayerResponse(playerResponse: unknown):
 }
 
 export async function fetchCaptionFragments(track: YouTubeCaptionTrack, fetchFn: typeof fetch = fetch): Promise<YouTubeCaptionFragment[]> {
-  const response = await fetchFn(track.baseUrl);
-  if (!response.ok) throw new Error(`자막 스크립트를 가져올 수 없습니다. HTTP ${response.status}`);
-  return parseCaptionResponse(await response.text(), response.headers.get("content-type") ?? "");
+  const errors: string[] = [];
+
+  for (const url of createCaptionRequestUrls(track.baseUrl)) {
+    try {
+      const response = await fetchFn(url);
+      if (!response.ok) {
+        errors.push(`HTTP ${response.status}`);
+        continue;
+      }
+
+      const fragments = parseCaptionResponse(await response.text(), response.headers.get("content-type") ?? "");
+      if (fragments.length > 0) return fragments;
+      errors.push("응답은 받았지만 자막 문장이 비어 있습니다.");
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  const detail = errors.at(-1);
+  throw new Error(detail ? `자막 스크립트를 가져올 수 없습니다. ${detail}` : "자막 스크립트를 가져올 수 없습니다.");
 }
 
 export function parseCaptionResponse(text: string, contentType = ""): YouTubeCaptionFragment[] {
   const trimmed = text.trim();
   if (!trimmed) return [];
   if (contentType.includes("json") || trimmed.startsWith("{")) return parseJson3CaptionResponse(trimmed);
+  if (contentType.includes("vtt") || trimmed.startsWith("WEBVTT")) return parseVttCaptionResponse(trimmed);
   return parseXmlCaptionResponse(trimmed);
 }
 
@@ -190,6 +208,36 @@ function parseXmlCaptionResponse(text: string): YouTubeCaptionFragment[] {
     .filter((fragment): fragment is YouTubeCaptionFragment => Boolean(fragment));
 }
 
+function parseVttCaptionResponse(text: string): YouTubeCaptionFragment[] {
+  const fragments: YouTubeCaptionFragment[] = [];
+  const blocks = text.replace(/\r/g, "").split(/\n\n+/);
+
+  for (const block of blocks) {
+    const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
+    const timeIndex = lines.findIndex((line) => line.includes("-->"));
+    if (timeIndex === -1) continue;
+
+    const [start, end] = lines[timeIndex].split("-->").map((part) => part.trim().split(/\s+/)[0]);
+    const startMs = parseVttTimestamp(start ?? "");
+    const endMs = parseVttTimestamp(end ?? "");
+    const captionText = normalizeWhitespace(lines.slice(timeIndex + 1).join(" "));
+    if (startMs === null || endMs === null || !captionText) continue;
+    fragments.push({ text: captionText, startMs, endMs });
+  }
+
+  return fragments;
+}
+
+function parseVttTimestamp(value: string): number | null {
+  const match = value.match(/^(?:(\d+):)?(\d{2}):(\d{2})\.(\d{3})$/);
+  if (!match) return null;
+  const hours = Number(match[1] ?? 0);
+  const minutes = Number(match[2]);
+  const seconds = Number(match[3]);
+  const milliseconds = Number(match[4]);
+  return ((hours * 60 + minutes) * 60 + seconds) * 1000 + milliseconds;
+}
+
 function extractPlayerResponseFromText(text: string): unknown {
   const marker = "ytInitialPlayerResponse";
   const markerIndex = text.indexOf(marker);
@@ -250,6 +298,25 @@ function captionTrackName(track: Record<string, unknown>): string {
     return runs.map((run) => getPath(run, ["text"])).filter((text): text is string => typeof text === "string").join("");
   }
   return "";
+}
+
+function createCaptionRequestUrls(baseUrl: string): string[] {
+  return dedupe([baseUrl, withCaptionFormat(baseUrl, "json3"), withCaptionFormat(baseUrl, "srv3"), withCaptionFormat(baseUrl, "vtt")]);
+}
+
+function withCaptionFormat(baseUrl: string, format: string): string {
+  try {
+    const url = new URL(baseUrl);
+    url.searchParams.set("fmt", format);
+    return url.toString();
+  } catch {
+    const separator = baseUrl.includes("?") ? "&" : "?";
+    return `${baseUrl}${separator}fmt=${encodeURIComponent(format)}`;
+  }
+}
+
+function dedupe(values: string[]): string[] {
+  return Array.from(new Set(values));
 }
 
 function compareCaptionTracks(left: YouTubeCaptionTrack, right: YouTubeCaptionTrack): number {
