@@ -5,7 +5,7 @@ import type { BackgroundRequest, BackgroundResponse, ExtensionState, ProfilePurp
 import { createContextMenuClickHandler, createTranslationContextMenus, sendTabMessage } from "./background/contextMenus";
 import { fetchImagePayload } from "./background/images";
 import { openGeneralTranslatorSurface } from "./background/generalTranslatorOpen";
-import { translatePageTexts } from "./background/pageTranslation";
+import { translatePageHtmlPatches, translatePageTexts } from "./background/pageTranslation";
 import { installBackgroundRuntimeErrorGuard } from "./background/runtimeErrors";
 import { sendTabRequestToContentScript } from "./background/tabMessaging";
 
@@ -44,6 +44,11 @@ async function handleMessage(request: BackgroundRequest, sender?: chrome.runtime
   if (request.type === "translatePage") {
     const texts = await translatePageTexts(request.texts, (text) => translate("page", text));
     return { ok: true, texts };
+  }
+
+  if (request.type === "translatePagePatch") {
+    const htmlPatches = await translatePageHtmlPatches(request.htmlPatches, (content) => translate("page", content));
+    return { ok: true, htmlPatches };
   }
 
   if (request.type === "translateSelection") {

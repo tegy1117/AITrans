@@ -1,5 +1,13 @@
 import type { BackgroundResponse, DictionaryTermSource, YouTubeCaptionPosition, YouTubeCaptionTrack } from "./shared/types";
-import { collectTranslatableTextNodes, createBatches, replaceTextNodes, restoreTextNodes, type TextReplacement } from "./content/domTranslator";
+import {
+  applyHtmlTranslationPatches,
+  collectTranslatableTextNodes,
+  createBatches,
+  createHtmlTranslationPatches,
+  replaceTextNodes,
+  restoreTextNodes,
+  type TextReplacement
+} from "./content/domTranslator";
 import { showTranslatorDrawer } from "./content/translatorDrawer";
 import { showSelectionBubble } from "./content/selectionBubble";
 import { getSelectionAnchor, rememberSelectionAnchor } from "./content/selectionContext";
@@ -109,6 +117,23 @@ async function translateCurrentPage(): Promise<void> {
   replacements = [];
 
   const nodes = collectTranslatableTextNodes(document.body);
+  const patches = createHtmlTranslationPatches(nodes);
+  if (patches.length === 0) return;
+
+  try {
+    const response = await sendBackground({ type: "translatePagePatch", htmlPatches: patches.map((patch) => patch.html) });
+    if (!response.ok) throw new Error(response.error);
+    if (!response.htmlPatches) throw new Error("No translated page HTML returned.");
+    replacements = applyHtmlTranslationPatches(patches, response.htmlPatches);
+    return;
+  } catch (error) {
+    if (error instanceof Error && error.message !== "No translated page HTML returned." && !error.message.includes("HTML 패치 항목")) {
+      throw error;
+    }
+    restoreTextNodes(replacements);
+    replacements = [];
+  }
+
   const texts = nodes.map((node) => node.textContent ?? "");
   const translated: string[] = [];
 

@@ -105,6 +105,7 @@ export interface ExtensionState {
 
 export type BackgroundRequest =
   | { type: "translatePage"; texts: string[] }
+  | { type: "translatePagePatch"; htmlPatches: string[] }
   | { type: "translateSelection"; text: string }
   | { type: "translateImage"; imageUrl: string }
   | { type: "translateGeneral"; text: string; profileId?: string }
@@ -123,5 +124,13 @@ export type BackgroundRequest =
   | { type: "saveState"; state: ExtensionState };
 
 export type BackgroundResponse =
-  | { ok: true; text?: string; texts?: string[]; state?: ExtensionState; tracks?: YouTubeCaptionTrack[]; selectedTrackId?: string }
+  | {
+      ok: true;
+      text?: string;
+      texts?: string[];
+      htmlPatches?: string[];
+      state?: ExtensionState;
+      tracks?: YouTubeCaptionTrack[];
+      selectedTrackId?: string;
+    }
   | { ok: false; error: string };
