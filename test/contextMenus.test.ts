@@ -91,4 +91,18 @@ describe("translation context menus", () => {
       )
     ).resolves.toBeUndefined();
   });
+
+  test("exposes a safe fire-and-forget context menu click handler", async () => {
+    const sendMessage = vi.fn(async () => {
+      throw new Error("Could not establish connection. Receiving end does not exist.");
+    });
+
+    const { createContextMenuClickHandler } = await import("../src/background/contextMenus");
+    const handler = createContextMenuClickHandler(sendMessage);
+
+    expect(() =>
+      handler({ menuItemId: SELECTION_TRANSLATE_MENU_ID, selectionText: "Hello" }, { id: 42 })
+    ).not.toThrow();
+    await Promise.resolve();
+  });
 });

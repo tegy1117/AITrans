@@ -2,7 +2,7 @@ import { renderPrompt } from "./shared/prompt";
 import { translateWithProvider } from "./shared/providers";
 import { loadState, saveState, trimTranslationHistory } from "./shared/storage";
 import type { BackgroundRequest, BackgroundResponse, ExtensionState, ProfilePurpose } from "./shared/types";
-import { createTranslationContextMenus, handleTranslationContextMenuClick } from "./background/contextMenus";
+import { createContextMenuClickHandler, createTranslationContextMenus } from "./background/contextMenus";
 import { fetchImagePayload } from "./background/images";
 
 chrome.runtime.onInstalled.addListener(async () => {
@@ -14,9 +14,7 @@ chrome.runtime.onStartup.addListener(() => {
   createTranslationContextMenus();
 });
 
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-  void handleTranslationContextMenuClick(info, tab);
-});
+chrome.contextMenus.onClicked.addListener(createContextMenuClickHandler());
 
 chrome.runtime.onMessage.addListener((request: BackgroundRequest, sender, sendResponse) => {
   handleMessage(request, sender)

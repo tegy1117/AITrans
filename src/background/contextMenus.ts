@@ -6,6 +6,10 @@ export interface ContextMenuApi {
   removeAll(callback: () => void): void;
 }
 type SendTabMessage = (tabId: number, message: unknown) => Promise<unknown> | void;
+type ContextMenuClickHandler = (
+  info: Pick<chrome.contextMenus.OnClickData, "menuItemId" | "selectionText" | "srcUrl">,
+  tab: Pick<chrome.tabs.Tab, "id"> | undefined
+) => void;
 
 export function createTranslationContextMenus(api: ContextMenuApi = chrome.contextMenus): void {
   api.removeAll(() => {
@@ -47,6 +51,12 @@ export async function handleTranslationContextMenuClick(
       imageUrl: info.srcUrl.trim()
     });
   }
+}
+
+export function createContextMenuClickHandler(sendMessage: SendTabMessage = chrome.tabs.sendMessage): ContextMenuClickHandler {
+  return (info, tab) => {
+    void handleTranslationContextMenuClick(info, tab, sendMessage).catch(() => undefined);
+  };
 }
 
 async function sendTabMessageSafely(sendMessage: SendTabMessage, tabId: number, message: unknown): Promise<void> {
