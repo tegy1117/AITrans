@@ -1,10 +1,9 @@
 import type { BackgroundResponse } from "./shared/types";
 import { collectTranslatableTextNodes, createBatches, replaceTextNodes, restoreTextNodes, type TextReplacement } from "./content/domTranslator";
-import { showSelectionBubble } from "./content/selectionBubble";
-import { getSelectionAnchor, rememberSelectionAnchor } from "./content/selectionContext";
+import { showTranslatorDrawer } from "./content/translatorDrawer";
+import { rememberSelectionAnchor } from "./content/selectionContext";
 
 let replacements: TextReplacement[] = [];
-let lastContextMenuAnchor = new DOMRect(16, 16, 0, 0);
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === "translateCurrentPage") {
@@ -39,8 +38,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 });
 
 document.addEventListener("selectionchange", () => rememberSelectionAnchor());
-document.addEventListener("contextmenu", (event) => {
-  lastContextMenuAnchor = new DOMRect(event.clientX, event.clientY, 0, 0);
+document.addEventListener("contextmenu", () => {
   rememberSelectionAnchor();
 });
 
@@ -65,38 +63,19 @@ async function translateSelectionText(text: string): Promise<void> {
   const trimmed = text.trim();
   if (!trimmed) return;
 
-  const anchor = getSelectionAnchor();
-  showSelectionBubble({ anchor, state: "loading", text: "" });
+  showTranslatorDrawer({ state: "loading", text: "" });
 
   const response = await sendBackground({ type: "translateSelection", text: trimmed });
   if (!response.ok || !response.text) {
-    showSelectionBubble({ anchor, state: "error", text: response.ok ? "No translated text returned." : response.error });
+    showTranslatorDrawer({ state: "error", text: response.ok ? "선택 번역 결과가 반환되지 않았습니다." : response.error });
     return;
   }
 
-  showSelectionBubble({
-    anchor,
+  showTranslatorDrawer({
     state: "translated",
     text: response.text,
     sourceText: trimmed,
-    onDictionaryRequest: async (term, sourceText) => {
-      const dictionaryResponse = await sendBackground({ type: "generateDictionaryEntry", term, sourceText });
-      if (!dictionaryResponse.ok || !dictionaryResponse.text) {
-        throw new Error(dictionaryResponse.ok ? "사전 설명이 반환되지 않았습니다." : dictionaryResponse.error);
-      }
-      return dictionaryResponse.text;
-    },
-    onDictionarySave: async (term, sourceText, explanation) => {
-      const entry = {
-        id: crypto.randomUUID(),
-        term,
-        sourceText,
-        explanation,
-        createdAt: new Date().toISOString()
-      };
-      const saveResponse = await sendBackground({ type: "saveDictionaryEntry", entry });
-      if (!saveResponse.ok) throw new Error(saveResponse.error);
-    }
+    ...dictionaryCallbacks()
   });
 }
 
@@ -104,28 +83,36 @@ async function translateImageUrl(imageUrl: string): Promise<void> {
   const trimmed = imageUrl.trim();
   if (!trimmed) return;
 
-  const anchor = lastContextMenuAnchor;
-  showSelectionBubble({ anchor, state: "loading", text: "" });
+  showTranslatorDrawer({ state: "loading", text: "" });
 
   const response = await sendBackground({ type: "translateImage", imageUrl: trimmed });
   if (!response.ok || !response.text) {
-    showSelectionBubble({ anchor, state: "error", text: response.ok ? "이미지 번역 결과가 반환되지 않았습니다." : response.error });
+    showTranslatorDrawer({ state: "error", text: response.ok ? "이미지 번역 결과가 반환되지 않았습니다." : response.error });
     return;
   }
 
-  showSelectionBubble({
-    anchor,
+  showTranslatorDrawer({
     state: "translated",
     text: response.text,
     sourceText: response.text,
-    onDictionaryRequest: async (term, sourceText) => {
+    ...dictionaryCallbacks()
+  });
+}
+
+function sendBackground(message: unknown): Promise<BackgroundResponse> {
+  return chrome.runtime.sendMessage(message);
+}
+
+function dictionaryCallbacks() {
+  return {
+    onDictionaryRequest: async (term: string, sourceText: string) => {
       const dictionaryResponse = await sendBackground({ type: "generateDictionaryEntry", term, sourceText });
       if (!dictionaryResponse.ok || !dictionaryResponse.text) {
         throw new Error(dictionaryResponse.ok ? "사전 설명이 반환되지 않았습니다." : dictionaryResponse.error);
       }
       return dictionaryResponse.text;
     },
-    onDictionarySave: async (term, sourceText, explanation) => {
+    onDictionarySave: async (term: string, sourceText: string, explanation: string) => {
       const entry = {
         id: crypto.randomUUID(),
         term,
@@ -136,9 +123,5 @@ async function translateImageUrl(imageUrl: string): Promise<void> {
       const saveResponse = await sendBackground({ type: "saveDictionaryEntry", entry });
       if (!saveResponse.ok) throw new Error(saveResponse.error);
     }
-  });
-}
-
-function sendBackground(message: unknown): Promise<BackgroundResponse> {
-  return chrome.runtime.sendMessage(message);
+  };
 }

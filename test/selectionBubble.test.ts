@@ -22,41 +22,6 @@ describe("selection bubble", () => {
     expect(document.querySelector("[data-ai-translator-bubble]")).toBeNull();
   });
 
-  test("generates and saves a dictionary entry from translated text", async () => {
-    const onDictionaryRequest = vi.fn(async () => "test: 시험하거나 확인하기 위한 말.");
-    const onDictionarySave = vi.fn(async () => undefined);
-
-    showSelectionBubble({
-      anchor: new DOMRect(20, 30, 100, 20),
-      state: "translated",
-      text: "번역 결과",
-      sourceText: "This is a test.",
-      onDictionaryRequest,
-      onDictionarySave
-    });
-
-    const dictionaryButton = document.querySelector<HTMLButtonElement>("[data-action='dictionary']");
-    expect(dictionaryButton).not.toBeNull();
-    dictionaryButton!.click();
-
-    const input = document.querySelector<HTMLInputElement>("[data-role='dictionary-term']");
-    expect(input).not.toBeNull();
-    input!.value = "test";
-    input!.dispatchEvent(new Event("input"));
-
-    document.querySelector<HTMLButtonElement>("[data-action='generate-dictionary']")!.click();
-    await Promise.resolve();
-    await Promise.resolve();
-
-    expect(onDictionaryRequest).toHaveBeenCalledWith("test", "This is a test.");
-    expect(document.body.textContent).toContain("test: 시험하거나 확인하기 위한 말.");
-
-    document.querySelector<HTMLButtonElement>("[data-action='save-dictionary']")!.click();
-    await Promise.resolve();
-
-    expect(onDictionarySave).toHaveBeenCalledWith("test", "This is a test.", "test: 시험하거나 확인하기 위한 말.");
-  });
-
   test("does not render for empty translated text", () => {
     showSelectionBubble({
       anchor: new DOMRect(0, 0, 0, 0),
@@ -65,6 +30,18 @@ describe("selection bubble", () => {
     });
 
     expect(document.querySelector("[data-ai-translator-bubble]")).toBeNull();
+  });
+
+  test("does not render dictionary input controls inside the small bubble", () => {
+    showSelectionBubble({
+      anchor: new DOMRect(20, 30, 100, 20),
+      state: "translated",
+      text: "번역 결과",
+      sourceText: "Original"
+    });
+
+    expect(document.querySelector("[data-action='dictionary']")).toBeNull();
+    expect(document.querySelector("[data-role='dictionary-term']")).toBeNull();
   });
 
   test("renders image translation loading and error states", () => {
