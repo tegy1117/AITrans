@@ -21,6 +21,11 @@ let replacements: TextReplacement[] = [];
 let youtubeCaptionSession: { intervalId: number; player: HTMLElement } | null = null;
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type === "aiTranslatorContentReady") {
+    sendResponse({ ok: true });
+    return false;
+  }
+
   if (message?.type === "translateCurrentPage") {
     translateCurrentPage()
       .then(() => sendResponse({ ok: true }))
