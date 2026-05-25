@@ -29,7 +29,7 @@ export function createTranslationContextMenus(api: ContextMenuApi = chrome.conte
 export async function handleTranslationContextMenuClick(
   info: Pick<chrome.contextMenus.OnClickData, "menuItemId" | "selectionText" | "srcUrl">,
   tab: Pick<chrome.tabs.Tab, "id"> | undefined,
-  sendMessage: SendTabMessage = chrome.tabs.sendMessage
+  sendMessage: SendTabMessage = sendTabMessage
 ): Promise<void> {
   if (!tab?.id) return;
 
@@ -53,10 +53,23 @@ export async function handleTranslationContextMenuClick(
   }
 }
 
-export function createContextMenuClickHandler(sendMessage: SendTabMessage = chrome.tabs.sendMessage): ContextMenuClickHandler {
+export function createContextMenuClickHandler(sendMessage: SendTabMessage = sendTabMessage): ContextMenuClickHandler {
   return (info, tab) => {
     void handleTranslationContextMenuClick(info, tab, sendMessage).catch(() => undefined);
   };
+}
+
+export function sendTabMessage(tabId: number, message: unknown): Promise<void> {
+  return new Promise((resolve, reject) => {
+    chrome.tabs.sendMessage(tabId, message, () => {
+      const error = chrome.runtime.lastError;
+      if (error) {
+        reject(new Error(error.message));
+        return;
+      }
+      resolve();
+    });
+  });
 }
 
 async function sendTabMessageSafely(sendMessage: SendTabMessage, tabId: number, message: unknown): Promise<void> {

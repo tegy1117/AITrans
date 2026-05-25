@@ -3,7 +3,8 @@ import {
   IMAGE_TRANSLATE_MENU_ID,
   SELECTION_TRANSLATE_MENU_ID,
   createTranslationContextMenus,
-  handleTranslationContextMenuClick
+  handleTranslationContextMenuClick,
+  sendTabMessage
 } from "../src/background/contextMenus";
 
 describe("translation context menus", () => {
@@ -104,5 +105,25 @@ describe("translation context menus", () => {
       handler({ menuItemId: SELECTION_TRANSLATE_MENU_ID, selectionText: "Hello" }, { id: 42 })
     ).not.toThrow();
     await Promise.resolve();
+  });
+
+  test("turns chrome callback lastError into a handled rejection", async () => {
+    const sendMessage = vi.fn((_tabId: number, _message: unknown, callback: () => void) => callback());
+    vi.stubGlobal("chrome", {
+      tabs: { sendMessage },
+      runtime: {
+        lastError: {
+          message: "Could not establish connection. Receiving end does not exist."
+        }
+      }
+    });
+
+    try {
+      await expect(sendTabMessage(42, { type: "missingReceiver" })).rejects.toThrow(
+        "Could not establish connection. Receiving end does not exist."
+      );
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
