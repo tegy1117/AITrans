@@ -132,8 +132,8 @@ function defaultMessagesFor(purpose: ProfilePurpose): PromptMessage[] {
         role: "user",
         content:
           purpose === "dictionary-source"
-            ? "{{dict content}} 원문 단어를 한국어 사전 항목으로 설명해줘.\n\n원문 문맥:\n{{content}}\n\n원문과 번역문:\n{{translation context}}"
-            : "{{dict content}} 번역문 단어를 한국어 사전 항목으로 설명해줘.\n\n원문 문맥:\n{{content}}\n\n원문과 번역문:\n{{translation context}}"
+            ? "{{dict content}} 원문 단어를 한국어 사전 항목으로 설명해줘.\n\n원문 전체 지문:\n{{content}}\n\n번역문 전체 지문:\n{{translation context}}"
+            : "{{dict content}} 번역문 단어를 한국어 사전 항목으로 설명해줘.\n\n원문 전체 지문:\n{{content}}\n\n번역문 전체 지문:\n{{translation context}}"
       }
     ];
   }

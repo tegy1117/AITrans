@@ -76,7 +76,8 @@ function renderTranslatedDrawer(drawer: HTMLElement, options: TranslatorDrawerOp
   const terms: HighlightedTerm[] = [];
   const candidates = new Map<string, DictionaryCandidate>();
   const sourceText = options.sourceText ?? "";
-  const dictionaryContext = createDictionaryContext(sourceText, options.text);
+  const translationContext = options.text;
+  const savedDictionaryContext = createSavedDictionaryContext(sourceText, options.text);
 
   const sourceSection = textSection("원문", "drawer-source", sourceText || "원문 정보가 없습니다.");
   const result = textSection("번역문", "drawer-result", options.text);
@@ -100,7 +101,15 @@ function renderTranslatedDrawer(drawer: HTMLElement, options: TranslatorDrawerOp
     createButton("일반 번역창", "open-general-translator", () => options.onOpenGeneralTranslator?.(sourceText || options.text, options.text)),
     createButton("사전 생성", "generate-dictionaries", async () => {
       if (!options.onDictionaryRequest) return;
-      await generateCandidates(terms, candidates, sourceText || options.text, dictionaryContext, options.onDictionaryRequest, renderCandidates);
+      await generateCandidates(
+        terms,
+        candidates,
+        sourceText || options.text,
+        translationContext,
+        savedDictionaryContext,
+        options.onDictionaryRequest,
+        renderCandidates
+      );
     })
   ]);
 
@@ -191,7 +200,7 @@ function textSection(title: string, role: string, text: string): HTMLElement {
   return section;
 }
 
-function createDictionaryContext(sourceText: string, translatedText: string): string {
+function createSavedDictionaryContext(sourceText: string, translatedText: string): string {
   const trimmedSource = sourceText.trim();
   const trimmedTranslated = translatedText.trim();
   if (!trimmedSource || trimmedSource === trimmedTranslated) return trimmedTranslated;
@@ -203,6 +212,7 @@ async function generateCandidates(
   candidates: Map<string, DictionaryCandidate>,
   sourceText: string,
   translationContext: string,
+  savedDictionaryContext: string,
   request: (term: string, sourceText: string, translationContext: string, termSource: DictionaryTermSource) => Promise<string>,
   render: () => void
 ): Promise<void> {
@@ -211,7 +221,7 @@ async function generateCandidates(
       id: createId("candidate"),
       term: term.term,
       termSource: term.source,
-      sourceText: translationContext,
+      sourceText: savedDictionaryContext,
       status: "pending"
     };
     candidates.set(candidateKey(term), candidate);

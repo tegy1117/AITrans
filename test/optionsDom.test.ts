@@ -102,12 +102,12 @@ describe("options DOM app", () => {
     )?.querySelector("select");
     expect(displayModeSelect).toBeDefined();
 
-    displayModeSelect!.value = "window";
+    displayModeSelect!.value = "tab";
     displayModeSelect!.dispatchEvent(new Event("change"));
     await Promise.resolve();
     await Promise.resolve();
 
     expect(onSave).toHaveBeenCalledOnce();
-    expect(onSave.mock.calls[0]?.[0].generalTranslatorDisplayMode).toBe("window");
+    expect(onSave.mock.calls[0]?.[0].generalTranslatorDisplayMode).toBe("tab");
   });
 });

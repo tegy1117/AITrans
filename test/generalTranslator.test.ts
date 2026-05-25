@@ -7,12 +7,17 @@ describe("general translator UI", () => {
     const root = document.createElement("div");
     const writeText = vi.fn();
     Object.assign(navigator, { clipboard: { writeText } });
-    const historyEntry = history("history-1", "Hello", "안녕하세요");
+    const historyEntry = history("history-1", "Hello", "안녕하세요", "문학 번역");
     const onTranslate = vi.fn(async () => ({ translatedText: "안녕하세요", history: [historyEntry] }));
 
     mountGeneralTranslator(root, {
       draft: { sourceText: "Hello" },
       history: [],
+      profileOptions: [
+        { id: "general-default", name: "일반 번역", model: "llama3.2" },
+        { id: "general-literary", name: "문학 번역", model: "gpt-4.1" }
+      ],
+      activeProfileId: "general-literary",
       onTranslate,
       onDeleteHistory: vi.fn(),
       onClearHistory: vi.fn()
@@ -22,9 +27,10 @@ describe("general translator UI", () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(onTranslate).toHaveBeenCalledWith("Hello");
+    expect(onTranslate).toHaveBeenCalledWith("Hello", "general-literary");
     expect(root.querySelector("[data-role='general-result']")?.textContent).toContain("안녕하세요");
     expect(root.textContent).toContain("Hello");
+    expect(root.textContent).toContain("문학 번역");
 
     root.querySelector<HTMLButtonElement>("[data-action='general-copy']")?.click();
     expect(writeText).toHaveBeenCalledWith("안녕하세요");
@@ -37,7 +43,9 @@ describe("general translator UI", () => {
 
     mountGeneralTranslator(root, {
       draft: {},
-      history: [history("history-1", "Hello", "안녕하세요")],
+      history: [history("history-1", "Hello", "안녕하세요", "일반 번역")],
+      profileOptions: [{ id: "general-default", name: "일반 번역", model: "llama3.2" }],
+      activeProfileId: "general-default",
       onTranslate: vi.fn(),
       onDeleteHistory,
       onClearHistory
@@ -49,7 +57,9 @@ describe("general translator UI", () => {
 
     mountGeneralTranslator(root, {
       draft: {},
-      history: [history("history-1", "Hello", "안녕하세요")],
+      history: [history("history-1", "Hello", "안녕하세요", "일반 번역")],
+      profileOptions: [{ id: "general-default", name: "일반 번역", model: "llama3.2" }],
+      activeProfileId: "general-default",
       onTranslate: vi.fn(),
       onDeleteHistory,
       onClearHistory
@@ -66,6 +76,8 @@ describe("general translator UI", () => {
     mountGeneralTranslator(root, {
       draft: { sourceText: "Hello" },
       history: [],
+      profileOptions: [{ id: "general-default", name: "일반 번역", model: "llama3.2" }],
+      activeProfileId: "general-default",
       onTranslate: vi.fn(async () => {
         throw new Error("API key is invalid.");
       }),
@@ -80,15 +92,45 @@ describe("general translator UI", () => {
     expect(root.textContent).toContain("API key is invalid.");
     expect(root.querySelector("[data-role='general-history']")?.textContent).toContain("아직 번역 기록이 없습니다.");
   });
+
+  test("lets the user choose a general translation profile", async () => {
+    const root = document.createElement("div");
+    const onTranslate = vi.fn(async () => ({ translatedText: "결과", history: [] }));
+
+    mountGeneralTranslator(root, {
+      draft: { sourceText: "Hello" },
+      history: [],
+      profileOptions: [
+        { id: "general-default", name: "일반 번역", model: "llama3.2" },
+        { id: "general-formal", name: "격식 번역", model: "gpt-4.1-mini" }
+      ],
+      activeProfileId: "general-default",
+      onTranslate,
+      onDeleteHistory: vi.fn(),
+      onClearHistory: vi.fn()
+    });
+
+    const select = root.querySelector<HTMLSelectElement>("[data-role='general-profile']");
+    expect(select).toBeDefined();
+    select!.value = "general-formal";
+    select!.dispatchEvent(new Event("change"));
+
+    root.querySelector<HTMLButtonElement>("[data-action='general-translate']")?.click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(onTranslate).toHaveBeenCalledWith("Hello", "general-formal");
+  });
 });
 
-function history(id: string, sourceText: string, translatedText: string): TranslationHistoryEntry {
+function history(id: string, sourceText: string, translatedText: string, profileName: string): TranslationHistoryEntry {
   return {
     id,
     sourceText,
     translatedText,
     createdAt: "2026-05-25T00:00:00.000Z",
     profileId: "general-default",
+    profileName,
     providerId: "ollama-local",
     model: "llama3.2"
   };

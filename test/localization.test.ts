@@ -14,7 +14,7 @@ describe("Korean UI localization", () => {
   test("manifest and context menu expose Korean descriptions", () => {
     const manifest = JSON.parse(readFileSync("public/manifest.json", "utf8"));
     expect(JSON.stringify(manifest)).toContain("AI 번역 확장 프로그램");
-    expect(manifest.permissions).toContain("windows");
+    expect(manifest.permissions).not.toContain("windows");
     expect(readFileSync("src/background/contextMenus.ts", "utf8")).toContain("선택한 텍스트 AI로 번역");
     expect(readFileSync("src/background/contextMenus.ts", "utf8")).toContain("이미지 AI로 번역");
   });

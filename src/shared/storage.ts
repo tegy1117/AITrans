@@ -42,10 +42,10 @@ export function normalizeState(input: Partial<ExtensionState> | undefined | null
     promptProfiles,
     activeProfileByPurpose: normalizeActiveProfiles(promptProfiles, requestedActive),
     dictionaryEntries: input?.dictionaryEntries ?? [],
-    translationHistory: normalizeTranslationHistory(input?.translationHistory),
+    translationHistory: normalizeTranslationHistory(input?.translationHistory, promptProfiles),
     selectionModeEnabled: input?.selectionModeEnabled ?? false,
     selectionResultDisplayMode: input?.selectionResultDisplayMode === "bubble" ? "bubble" : "drawer",
-    generalTranslatorDisplayMode: input?.generalTranslatorDisplayMode === "window" ? "window" : "drawer"
+    generalTranslatorDisplayMode: normalizeGeneralTranslatorDisplayMode(input?.generalTranslatorDisplayMode)
   };
 }
 
@@ -53,8 +53,22 @@ export function trimTranslationHistory(entries: ExtensionState["translationHisto
   return entries.slice(0, MAX_TRANSLATION_HISTORY);
 }
 
-function normalizeTranslationHistory(entries: ExtensionState["translationHistory"] | undefined): ExtensionState["translationHistory"] {
-  return trimTranslationHistory(entries ?? []);
+function normalizeTranslationHistory(
+  entries: ExtensionState["translationHistory"] | undefined,
+  profiles: PromptProfile[]
+): ExtensionState["translationHistory"] {
+  const profileNames = new Map(profiles.map((profile) => [profile.id, profile.name]));
+  return trimTranslationHistory(
+    (entries ?? []).map((entry) => ({
+      ...entry,
+      profileName: entry.profileName ?? profileNames.get(entry.profileId) ?? entry.profileId
+    }))
+  );
+}
+
+function normalizeGeneralTranslatorDisplayMode(value: unknown): ExtensionState["generalTranslatorDisplayMode"] {
+  if (value === "tab" || value === "window") return "tab";
+  return "drawer";
 }
 
 function normalizePromptProfiles(input: PromptProfile[] | undefined, defaults: PromptProfile[]): PromptProfile[] {
@@ -99,13 +113,13 @@ function createDefaultPromptProfiles(): PromptProfile[] {
       "dictionary-default",
       "dictionary",
       "번역문 사전 항목",
-      "다음 단어를 한국어 사전 항목으로 설명해줘: {{dict content}}\n\n원문 문맥:\n{{content}}\n\n원문과 번역문:\n{{translation context}}"
+      "다음 단어를 한국어 사전 항목으로 설명해줘: {{dict content}}\n\n원문 전체 지문:\n{{content}}\n\n번역문 전체 지문:\n{{translation context}}"
     ),
     createProfile(
       "dictionary-source-default",
       "dictionary-source",
       "원문 사전 항목",
-      "다음 원문 단어를 한국어 사전 항목으로 설명해줘: {{dict content}}\n\n원문 문맥:\n{{content}}\n\n원문과 번역문:\n{{translation context}}"
+      "다음 원문 단어를 한국어 사전 항목으로 설명해줘: {{dict content}}\n\n원문 전체 지문:\n{{content}}\n\n번역문 전체 지문:\n{{translation context}}"
     )
   ];
 }

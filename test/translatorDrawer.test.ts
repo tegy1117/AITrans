@@ -71,16 +71,16 @@ describe("translator drawer", () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    const dictionaryContext = "원문:\nOriginal context\n\n번역문:\nalpha beta";
-    expect(onDictionaryRequest).toHaveBeenCalledWith("alpha", "Original context", dictionaryContext, "translation");
-    expect(onDictionaryRequest).toHaveBeenCalledWith("beta", "Original context", dictionaryContext, "translation");
+    const savedContext = "원문:\nOriginal context\n\n번역문:\nalpha beta";
+    expect(onDictionaryRequest).toHaveBeenCalledWith("alpha", "Original context", "alpha beta", "translation");
+    expect(onDictionaryRequest).toHaveBeenCalledWith("beta", "Original context", "alpha beta", "translation");
     expect(document.body.textContent).toContain("alpha: 설명");
     expect(document.body.textContent).toContain("beta: 설명");
 
     document.querySelector<HTMLButtonElement>("[data-action='save-dictionary-candidate']")?.click();
     await Promise.resolve();
 
-    expect(onDictionarySave).toHaveBeenCalledWith("alpha", dictionaryContext, "alpha: 설명");
+    expect(onDictionarySave).toHaveBeenCalledWith("alpha", savedContext, "alpha: 설명");
   });
 
   test("adds highlighted terms from source and translated text selections", () => {
@@ -100,6 +100,27 @@ describe("translator drawer", () => {
 
     const terms = Array.from(document.querySelectorAll("[data-role='highlighted-term-label']")).map((node) => node.textContent);
     expect(terms).toEqual(["source", "translated"]);
+  });
+
+  test("uses original text as content and translated text as dictionary translation context", async () => {
+    const onDictionaryRequest = vi.fn(async (term: string) => `${term}: 설명`);
+
+    showTranslatorDrawer({
+      state: "translated",
+      text: "번역된 전체 문장",
+      sourceText: "Original full sentence",
+      onDictionaryRequest
+    });
+
+    const source = document.querySelector<HTMLElement>("[data-role='drawer-source']")!;
+    selectText(source.firstChild!, 0, 8);
+    source.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
+    document.querySelector<HTMLButtonElement>("[data-action='generate-dictionaries']")?.click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(onDictionaryRequest).toHaveBeenCalledWith("Original", "Original full sentence", "번역된 전체 문장", "source");
   });
 
   test("keeps equal source and translated terms separate for dictionary generation", async () => {

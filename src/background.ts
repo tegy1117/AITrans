@@ -53,7 +53,7 @@ async function handleMessage(request: BackgroundRequest, sender?: chrome.runtime
   }
 
   if (request.type === "translateGeneral") {
-    return translateGeneral(request.text);
+    return translateGeneral(request.text, request.profileId);
   }
 
   if (request.type === "deleteTranslationHistoryEntry") {
@@ -152,17 +152,17 @@ async function generateDictionaryEntry(
   const prompt = renderPrompt(profile, {
     content: sourceText,
     dictContent: trimmedTerm,
-    translationContext: translationContext ?? sourceText
+    translationContext: translationContext ?? ""
   });
   return translateWithProvider(provider, prompt);
 }
 
-async function translateGeneral(text: string): Promise<BackgroundResponse> {
+async function translateGeneral(text: string, profileId?: string): Promise<BackgroundResponse> {
   const sourceText = text.trim();
   if (!sourceText) throw new Error("번역할 텍스트를 입력해 주세요.");
 
   const state = await loadState();
-  const profile = findActiveProfile(state, "general");
+  const profile = findGeneralProfile(state, profileId);
   const provider = state.providerConfigs.find((config) => config.id === profile.providerId);
   if (!provider) throw new Error(`Provider ${profile.providerId} is not configured.`);
 
@@ -174,6 +174,7 @@ async function translateGeneral(text: string): Promise<BackgroundResponse> {
     translatedText,
     createdAt: new Date().toISOString(),
     profileId: profile.id,
+    profileName: profile.name,
     providerId: provider.id,
     model: profile.model
   };
@@ -194,9 +195,18 @@ async function openGeneralTranslator(sourceText: string, translatedText: string,
     translatedText,
     tabId,
     sendMessage: sendTabMessage,
-    createWindow: chrome.windows.create,
+    createTab: (options) => chrome.tabs.create(options),
     getExtensionUrl: chrome.runtime.getURL
   });
+}
+
+function findGeneralProfile(state: ExtensionState, profileId?: string) {
+  if (profileId) {
+    const profile = state.promptProfiles.find((candidate) => candidate.id === profileId && candidate.purpose === "general");
+    if (!profile) throw new Error("선택한 일반 번역 프로필을 찾을 수 없습니다.");
+    return profile;
+  }
+  return findActiveProfile(state, "general");
 }
 
 function findActiveProfile(state: ExtensionState, purpose: ProfilePurpose) {

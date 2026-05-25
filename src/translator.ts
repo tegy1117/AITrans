@@ -1,6 +1,6 @@
 import "./styles.css";
 import { mountGeneralTranslator, type GeneralTranslatorResult } from "./generalTranslatorDom";
-import type { BackgroundResponse, TranslationHistoryEntry } from "./shared/types";
+import type { BackgroundResponse, ExtensionState, TranslationHistoryEntry } from "./shared/types";
 
 void initialize();
 
@@ -10,7 +10,8 @@ async function initialize(): Promise<void> {
 
   const params = new URLSearchParams(location.search);
   const stateResponse = (await chrome.runtime.sendMessage({ type: "getState" })) as BackgroundResponse;
-  const history = stateResponse.ok && stateResponse.state ? stateResponse.state.translationHistory : [];
+  const state = stateResponse.ok && stateResponse.state ? stateResponse.state : undefined;
+  const history = state?.translationHistory ?? [];
 
   mountGeneralTranslator(root, {
     draft: {
@@ -18,8 +19,10 @@ async function initialize(): Promise<void> {
       translatedText: params.get("translatedText") ?? ""
     },
     history,
-    async onTranslate(text): Promise<GeneralTranslatorResult> {
-      const response = (await chrome.runtime.sendMessage({ type: "translateGeneral", text })) as BackgroundResponse;
+    profileOptions: createGeneralProfileOptions(state),
+    activeProfileId: state?.activeProfileByPurpose.general ?? "",
+    async onTranslate(text, profileId): Promise<GeneralTranslatorResult> {
+      const response = (await chrome.runtime.sendMessage({ type: "translateGeneral", text, profileId })) as BackgroundResponse;
       if (!response.ok || !response.text || !response.state) {
         throw new Error(response.ok ? "일반 번역 결과가 반환되지 않았습니다." : response.error);
       }
@@ -36,4 +39,16 @@ async function initialize(): Promise<void> {
       return response.state.translationHistory;
     }
   });
+}
+
+function createGeneralProfileOptions(state: ExtensionState | undefined) {
+  if (!state) return [];
+  return state.promptProfiles
+    .filter((profile) => profile.purpose === "general")
+    .map((profile) => ({
+      id: profile.id,
+      name: profile.name,
+      model: profile.model,
+      providerName: state.providerConfigs.find((provider) => provider.id === profile.providerId)?.name
+    }));
 }

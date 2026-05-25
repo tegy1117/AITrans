@@ -4,7 +4,7 @@ export type DictionaryTermSource = "source" | "translation";
 
 export type SelectionResultDisplayMode = "drawer" | "bubble";
 
-export type GeneralTranslatorDisplayMode = "drawer" | "window";
+export type GeneralTranslatorDisplayMode = "drawer" | "tab";
 
 export type MessageRole = "system" | "user" | "assistant";
 
@@ -76,6 +76,7 @@ export interface TranslationHistoryEntry {
   translatedText: string;
   createdAt: string;
   profileId: string;
+  profileName: string;
   providerId: string;
   model: string;
 }
@@ -95,7 +96,7 @@ export type BackgroundRequest =
   | { type: "translatePage"; texts: string[] }
   | { type: "translateSelection"; text: string }
   | { type: "translateImage"; imageUrl: string }
-  | { type: "translateGeneral"; text: string }
+  | { type: "translateGeneral"; text: string; profileId?: string }
   | { type: "deleteTranslationHistoryEntry"; id: string }
   | { type: "clearTranslationHistory" }
   | { type: "openGeneralTranslator"; sourceText?: string; translatedText?: string }

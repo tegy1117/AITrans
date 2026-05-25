@@ -9,6 +9,7 @@ import type {
   ProviderConfig,
   ProviderType,
   SelectionResultDisplayMode,
+  GeneralTranslatorDisplayMode,
   ReasoningEffort
 } from "../shared/types";
 import { validatePromptMessages } from "./promptValidation";
@@ -182,13 +183,13 @@ export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState,
       selectRow(
         "일반 번역창 표시 방식",
         state.generalTranslatorDisplayMode,
-        ["drawer", "window"],
+        ["drawer", "tab"],
         (value) => {
-          void saveGeneralTranslatorDisplayMode(value as "drawer" | "window");
+          void saveGeneralTranslatorDisplayMode(value as GeneralTranslatorDisplayMode);
         },
         generalTranslatorDisplayModeLabel
       ),
-      helpText("사이드바는 원문과 번역문을 함께 보여주고, 하단 번역창은 선택 위치 근처에 작은 결과창을 띄웁니다.")
+      helpText("선택 번역은 사이드바나 하단 번역창으로 표시할 수 있고, 일반 번역창은 페이지 안 사이드바나 새 탭으로 열 수 있습니다.")
     );
     return panel;
   }
@@ -205,7 +206,7 @@ export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState,
     render();
   }
 
-  async function saveGeneralTranslatorDisplayMode(generalTranslatorDisplayMode: "drawer" | "window"): Promise<void> {
+  async function saveGeneralTranslatorDisplayMode(generalTranslatorDisplayMode: GeneralTranslatorDisplayMode): Promise<void> {
     const nextState = { ...state, generalTranslatorDisplayMode };
     state = nextState;
     try {
@@ -576,5 +577,5 @@ function selectionResultDisplayModeLabel(value: string): string {
 }
 
 function generalTranslatorDisplayModeLabel(value: string): string {
-  return value === "window" ? "별도 창" : "사이드바";
+  return value === "tab" ? "새 탭" : "사이드바";
 }

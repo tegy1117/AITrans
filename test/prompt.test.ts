@@ -64,18 +64,18 @@ describe("renderPrompt", () => {
         purpose: "dictionary",
         messages: [
           { role: "system", content: "Explain the selected word." },
-          { role: "user", content: "Word: {{dict content}}\nSource: {{content}}\nBoth: {{translation context}}" }
+          { role: "user", content: "Word: {{dict content}}\nSource: {{content}}\nTranslated: {{translation context}}" }
         ]
       },
       {
         content: "Original sentence.",
         dictContent: "term",
-        translationContext: "원문:\nOriginal sentence.\n\n번역문:\n번역된 문장."
+        translationContext: "번역된 문장."
       }
     );
 
     expect(rendered.messages.at(-1)?.content).toBe(
-      "Word: term\nSource: Original sentence.\nBoth: 원문:\nOriginal sentence.\n\n번역문:\n번역된 문장."
+      "Word: term\nSource: Original sentence.\nTranslated: 번역된 문장."
     );
   });
 });

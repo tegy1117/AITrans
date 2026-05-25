@@ -11,7 +11,7 @@ describe("dictionary workflow state and prompt", () => {
     const rendered = renderPrompt(profile!, {
       content: "This is a test sentence.",
       dictContent: "test",
-      translationContext: "원문:\nThis is a test sentence.\n\n번역문:\n이것은 테스트 문장입니다."
+      translationContext: "이것은 테스트 문장입니다."
     });
 
     const promptText = rendered.messages.map((message) => message.content).join("\n");

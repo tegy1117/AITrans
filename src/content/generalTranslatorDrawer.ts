@@ -1,5 +1,5 @@
 import { mountGeneralTranslator, type GeneralTranslatorDraft, type GeneralTranslatorResult } from "../generalTranslatorDom";
-import type { BackgroundResponse, TranslationHistoryEntry } from "../shared/types";
+import type { BackgroundResponse, ExtensionState, TranslationHistoryEntry } from "../shared/types";
 
 const GENERAL_DRAWER_ATTR = "data-ai-general-translator-drawer";
 
@@ -19,13 +19,16 @@ export async function showGeneralTranslatorDrawer(
   document.body.append(drawer);
 
   const stateResponse = await callbacks.sendBackground({ type: "getState" });
-  const history = stateResponse.ok && stateResponse.state ? stateResponse.state.translationHistory : [];
+  const state = stateResponse.ok && stateResponse.state ? stateResponse.state : undefined;
+  const history = state?.translationHistory ?? [];
 
   mountGeneralTranslator(drawer, {
     draft,
     history,
-    async onTranslate(text): Promise<GeneralTranslatorResult> {
-      const response = await callbacks.sendBackground({ type: "translateGeneral", text });
+    profileOptions: createGeneralProfileOptions(state),
+    activeProfileId: state?.activeProfileByPurpose.general ?? "",
+    async onTranslate(text, profileId): Promise<GeneralTranslatorResult> {
+      const response = await callbacks.sendBackground({ type: "translateGeneral", text, profileId });
       if (!response.ok || !response.text || !response.state) {
         throw new Error(response.ok ? "일반 번역 결과가 반환되지 않았습니다." : response.error);
       }
@@ -65,4 +68,16 @@ function applyDrawerStyle(drawer: HTMLElement): void {
   drawer.style.boxShadow = "-12px 0 32px rgba(15, 23, 42, 0.18)";
   drawer.style.color = "#111827";
   drawer.style.font = "13px/1.5 system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+}
+
+function createGeneralProfileOptions(state: ExtensionState | undefined) {
+  if (!state) return [];
+  return state.promptProfiles
+    .filter((profile) => profile.purpose === "general")
+    .map((profile) => ({
+      id: profile.id,
+      name: profile.name,
+      model: profile.model,
+      providerName: state.providerConfigs.find((provider) => provider.id === profile.providerId)?.name
+    }));
 }

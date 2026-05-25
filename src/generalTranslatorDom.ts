@@ -3,6 +3,7 @@ import type { TranslationHistoryEntry } from "./shared/types";
 export interface GeneralTranslatorDraft {
   sourceText?: string;
   translatedText?: string;
+  profileId?: string;
 }
 
 export interface GeneralTranslatorResult {
@@ -10,10 +11,19 @@ export interface GeneralTranslatorResult {
   history: TranslationHistoryEntry[];
 }
 
+export interface GeneralTranslatorProfileOption {
+  id: string;
+  name: string;
+  model: string;
+  providerName?: string;
+}
+
 export interface GeneralTranslatorCallbacks {
   draft: GeneralTranslatorDraft;
   history: TranslationHistoryEntry[];
-  onTranslate(text: string): Promise<GeneralTranslatorResult>;
+  profileOptions: GeneralTranslatorProfileOption[];
+  activeProfileId: string;
+  onTranslate(text: string, profileId: string): Promise<GeneralTranslatorResult>;
   onDeleteHistory(id: string): Promise<TranslationHistoryEntry[]>;
   onClearHistory(): Promise<TranslationHistoryEntry[]>;
   onClose?: () => void;
@@ -22,6 +32,7 @@ export interface GeneralTranslatorCallbacks {
 export function mountGeneralTranslator(root: HTMLElement, callbacks: GeneralTranslatorCallbacks): void {
   let history = callbacks.history;
   let translatedText = callbacks.draft.translatedText ?? "";
+  let selectedProfileId = resolveInitialProfileId(callbacks);
   let statusMessage = "";
   let isLoading = false;
 
@@ -51,6 +62,8 @@ export function mountGeneralTranslator(root: HTMLElement, callbacks: GeneralTran
     input.style.width = "100%";
     input.style.boxSizing = "border-box";
 
+    const profileSelect = profileSelectRow();
+
     const result = document.createElement("div");
     result.dataset.role = "general-result";
     result.textContent = translatedText || "번역 결과가 여기에 표시됩니다.";
@@ -69,7 +82,8 @@ export function mountGeneralTranslator(root: HTMLElement, callbacks: GeneralTran
         statusMessage = "번역 중...";
         render();
         try {
-          const response = await callbacks.onTranslate(sourceText);
+          callbacks.draft.profileId = selectedProfileId;
+          const response = await callbacks.onTranslate(sourceText, selectedProfileId);
           translatedText = response.translatedText;
           history = response.history;
           callbacks.draft.sourceText = sourceText;
@@ -97,8 +111,31 @@ export function mountGeneralTranslator(root: HTMLElement, callbacks: GeneralTran
     renderHistory(historyList);
     historySection.append(historyTitle, row([button("전체 삭제", "clear-general-history", clearHistory, history.length === 0)]), historyList);
 
-    wrapper.append(header, input, actions, result, status, historySection);
+    wrapper.append(header, profileSelect, input, actions, result, status, historySection);
     root.append(wrapper);
+  }
+
+  function profileSelectRow(): HTMLElement {
+    const label = document.createElement("label");
+    label.textContent = "번역 프로필";
+    label.style.display = "grid";
+    label.style.gap = "4px";
+
+    const select = document.createElement("select");
+    select.dataset.role = "general-profile";
+    select.replaceChildren(
+      ...callbacks.profileOptions.map((profile) => {
+        const meta = [profile.providerName, profile.model].filter(Boolean).join(" / ");
+        return new Option(meta ? `${profile.name} (${meta})` : profile.name, profile.id);
+      })
+    );
+    select.value = selectedProfileId;
+    select.addEventListener("change", () => {
+      selectedProfileId = select.value;
+      callbacks.draft.profileId = selectedProfileId;
+    });
+    label.append(select);
+    return label;
   }
 
   function renderHistory(historyList: HTMLElement): void {
@@ -120,7 +157,12 @@ export function mountGeneralTranslator(root: HTMLElement, callbacks: GeneralTran
       source.textContent = entry.sourceText;
       const translated = document.createElement("p");
       translated.textContent = entry.translatedText;
-      item.append(source, translated, row([button("삭제", "delete-general-history", () => void deleteHistory(entry.id))]));
+      const meta = document.createElement("p");
+      meta.dataset.role = "general-history-profile";
+      meta.textContent = `프로필: ${entry.profileName || entry.profileId}`;
+      meta.style.color = "#64748b";
+      meta.style.fontSize = "12px";
+      item.append(source, translated, meta, row([button("삭제", "delete-general-history", () => void deleteHistory(entry.id))]));
       historyList.append(item);
     }
   }
@@ -134,6 +176,13 @@ export function mountGeneralTranslator(root: HTMLElement, callbacks: GeneralTran
     history = await callbacks.onClearHistory();
     render();
   }
+}
+
+function resolveInitialProfileId(callbacks: GeneralTranslatorCallbacks): string {
+  const ids = new Set(callbacks.profileOptions.map((profile) => profile.id));
+  if (callbacks.draft.profileId && ids.has(callbacks.draft.profileId)) return callbacks.draft.profileId;
+  if (callbacks.activeProfileId && ids.has(callbacks.activeProfileId)) return callbacks.activeProfileId;
+  return callbacks.profileOptions[0]?.id ?? "";
 }
 
 function button(label: string, action: string, onClick: () => void, disabled = false): HTMLButtonElement {

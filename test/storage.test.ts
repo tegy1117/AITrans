@@ -47,6 +47,12 @@ describe("storage state", () => {
     expect(normalized.translationHistory).toEqual([]);
   });
 
+  test("normalizes old separate-window display mode to the new tab mode", () => {
+    const state = normalizeState({ generalTranslatorDisplayMode: "window" } as never);
+
+    expect(state.generalTranslatorDisplayMode).toBe("tab");
+  });
+
   test("keeps only the latest 100 translation history entries", () => {
     const entries = Array.from({ length: 105 }, (_, index) => ({
       id: `history-${index}`,
@@ -54,6 +60,7 @@ describe("storage state", () => {
       translatedText: `translated-${index}`,
       createdAt: `2026-05-25T00:00:${String(index).padStart(2, "0")}.000Z`,
       profileId: "general-default",
+      profileName: "일반 번역",
       providerId: "ollama-local",
       model: "llama3.2"
     }));
@@ -63,6 +70,24 @@ describe("storage state", () => {
     expect(state.translationHistory).toHaveLength(100);
     expect(state.translationHistory[0]?.id).toBe("history-0");
     expect(state.translationHistory.at(-1)?.id).toBe("history-99");
+  });
+
+  test("adds profile names to older translation history entries", () => {
+    const state = normalizeState({
+      translationHistory: [
+        {
+          id: "history-1",
+          sourceText: "Hello",
+          translatedText: "안녕하세요",
+          createdAt: "2026-05-25T00:00:00.000Z",
+          profileId: "general-default",
+          providerId: "ollama-local",
+          model: "llama3.2"
+        } as never
+      ]
+    });
+
+    expect(state.translationHistory[0]?.profileName).toBe("일반 번역");
   });
 
   test("normalizes missing persisted fields without losing provider configs", () => {
