@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import { sendTabRequestToContentScript } from "../src/background/tabMessaging";
+import { createChromeTabContentScriptApi, sendTabRequestToContentScript } from "../src/background/tabMessaging";
 import type { BackgroundResponse } from "../src/shared/types";
 
 const missingReceiver = new Error("Could not establish connection. Receiving end does not exist.");
@@ -30,6 +30,32 @@ describe("background tab messaging", () => {
     expect(response).toEqual({ ok: true, tracks: [] });
     expect(injectContentScript).toHaveBeenCalledWith(42);
     expect(sendMessage).toHaveBeenCalledWith(42, { type: "aiTranslatorContentReady" });
+  });
+
+  test("injects the content script into the isolated extension world", async () => {
+    const executeScript = vi.fn(async () => []);
+    vi.stubGlobal("chrome", {
+      tabs: {
+        sendMessage: vi.fn()
+      },
+      runtime: {},
+      scripting: {
+        executeScript
+      }
+    });
+
+    try {
+      const api = createChromeTabContentScriptApi();
+      await api.injectContentScript(42);
+
+      expect(executeScript).toHaveBeenCalledWith({
+        target: { tabId: 42 },
+        files: ["contentScript.js"],
+        world: "ISOLATED"
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

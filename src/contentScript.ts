@@ -21,7 +21,10 @@ import {
 let replacements: TextReplacement[] = [];
 let youtubeCaptionSession: { intervalId: number; player: HTMLElement } | null = null;
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+const extensionRuntime = getExtensionRuntime();
+
+if (extensionRuntime) {
+  extensionRuntime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === "aiTranslatorContentReady") {
     sendResponse({ ok: true });
     return false;
@@ -92,13 +95,14 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   return false;
-});
+  });
 
-document.addEventListener("selectionchange", () => rememberSelectionAnchor());
-document.addEventListener("contextmenu", () => {
-  rememberSelectionAnchor();
-});
-window.addEventListener("yt-navigate-start", () => stopYouTubeCaptionTranslation());
+  document.addEventListener("selectionchange", () => rememberSelectionAnchor());
+  document.addEventListener("contextmenu", () => {
+    rememberSelectionAnchor();
+  });
+  window.addEventListener("yt-navigate-start", () => stopYouTubeCaptionTranslation());
+}
 
 async function translateCurrentPage(): Promise<void> {
   restoreTextNodes(replacements);
@@ -188,7 +192,9 @@ async function translateImageUrl(imageUrl: string): Promise<void> {
 }
 
 function sendBackground(message: unknown): Promise<BackgroundResponse> {
-  return chrome.runtime.sendMessage(message);
+  const runtime = getExtensionRuntime();
+  if (!runtime) return Promise.resolve({ ok: false, error: "확장 프로그램 런타임에 연결할 수 없습니다. 페이지를 새로고침해 주세요." });
+  return runtime.sendMessage(message);
 }
 
 async function getSelectionResultDisplayMode(): Promise<"drawer" | "bubble"> {
@@ -344,4 +350,9 @@ function isYouTubeWatchPage(url: string): boolean {
   } catch {
     return false;
   }
+}
+
+function getExtensionRuntime(): typeof chrome.runtime | null {
+  if (typeof chrome === "undefined" || !chrome.runtime?.onMessage || !chrome.runtime.sendMessage) return null;
+  return chrome.runtime;
 }

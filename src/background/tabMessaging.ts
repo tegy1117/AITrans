@@ -49,7 +49,7 @@ export function createChromeTabContentScriptApi(): TabContentScriptApi {
       });
     },
     async injectContentScript(tabId) {
-      await chrome.scripting.executeScript({ target: { tabId }, files: ["contentScript.js"] });
+      await chrome.scripting.executeScript({ target: { tabId }, files: ["contentScript.js"], world: "ISOLATED" });
     },
     delay(ms) {
       return new Promise((resolve) => globalThis.setTimeout(resolve, ms));

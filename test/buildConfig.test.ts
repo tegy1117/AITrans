@@ -5,6 +5,9 @@ import { resolve } from "node:path";
 const appConfig = readFileSync(resolve("vite.config.ts"), "utf8");
 const contentScriptConfig = readFileSync(resolve("vite.content.config.ts"), "utf8");
 const packageJson = readFileSync(resolve("package.json"), "utf8");
+const manifest = JSON.parse(readFileSync(resolve("public/manifest.json"), "utf8")) as {
+  content_scripts?: Array<{ world?: string }>;
+};
 
 describe("extension build configuration", () => {
   test("builds the content script as a classic self-contained file", () => {
@@ -19,6 +22,10 @@ describe("extension build configuration", () => {
 
   test("does not include the content script in the shared app build", () => {
     expect(appConfig).not.toContain("src/contentScript.ts");
+  });
+
+  test("loads manifest content scripts in the isolated extension world", () => {
+    expect(manifest.content_scripts?.[0]?.world).toBe("ISOLATED");
   });
 });
 
