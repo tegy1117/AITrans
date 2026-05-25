@@ -65,17 +65,11 @@ export function removeTranslatorDrawer(): void {
 function renderTranslatedDrawer(drawer: HTMLElement, options: TranslatorDrawerOptions): void {
   const terms: HighlightedTerm[] = [];
   const candidates = new Map<string, DictionaryCandidate>();
-  const sourceText = options.sourceText ?? options.text;
+  const sourceText = options.sourceText ?? "";
+  const dictionaryContext = createDictionaryContext(sourceText, options.text);
 
-  const result = document.createElement("div");
-  result.dataset.role = "drawer-result";
-  result.textContent = options.text;
-  result.style.whiteSpace = "pre-wrap";
-  result.style.userSelect = "text";
-  result.style.border = "1px solid #d7dde8";
-  result.style.borderRadius = "8px";
-  result.style.padding = "10px";
-  result.style.background = "#f8fafc";
+  const sourceSection = textSection("원문", "drawer-source", sourceText || "원문 정보가 없습니다.");
+  const result = textSection("번역문", "drawer-result", options.text);
   result.addEventListener("mouseup", () => {
     const selected = window.getSelection()?.toString().trim();
     if (!selected || !result.textContent?.includes(selected)) return;
@@ -88,7 +82,7 @@ function renderTranslatedDrawer(drawer: HTMLElement, options: TranslatorDrawerOp
     createButton("복사", "copy", () => void navigator.clipboard?.writeText(options.text)),
     createButton("사전 생성", "generate-dictionaries", async () => {
       if (!options.onDictionaryRequest) return;
-      await generateCandidates(terms, candidates, sourceText, options.onDictionaryRequest, renderCandidates);
+      await generateCandidates(terms, candidates, dictionaryContext, options.onDictionaryRequest, renderCandidates);
     })
   ]);
 
@@ -106,7 +100,7 @@ function renderTranslatedDrawer(drawer: HTMLElement, options: TranslatorDrawerOp
   candidatesList.dataset.role = "dictionary-candidates";
   candidatesSection.append(candidatesTitle, candidatesList);
 
-  drawer.append(result, actions, termsSection, candidatesSection);
+  drawer.append(sourceSection, result, actions, termsSection, candidatesSection);
   renderTerms();
   renderCandidates();
 
@@ -158,6 +152,32 @@ function renderTranslatedDrawer(drawer: HTMLElement, options: TranslatorDrawerOp
       candidatesList.append(renderCandidate(candidate, options, candidates, renderCandidates));
     }
   }
+}
+
+function textSection(title: string, role: string, text: string): HTMLElement {
+  const section = document.createElement("section");
+  const heading = document.createElement("h3");
+  heading.textContent = title;
+
+  const body = document.createElement("div");
+  body.dataset.role = role;
+  body.textContent = text;
+  body.style.whiteSpace = "pre-wrap";
+  body.style.userSelect = "text";
+  body.style.border = "1px solid #d7dde8";
+  body.style.borderRadius = "8px";
+  body.style.padding = "10px";
+  body.style.background = role === "drawer-result" ? "#f8fafc" : "#ffffff";
+
+  section.append(heading, body);
+  return section;
+}
+
+function createDictionaryContext(sourceText: string, translatedText: string): string {
+  const trimmedSource = sourceText.trim();
+  const trimmedTranslated = translatedText.trim();
+  if (!trimmedSource || trimmedSource === trimmedTranslated) return trimmedTranslated;
+  return `원문:\n${trimmedSource}\n\n번역문:\n${trimmedTranslated}`;
 }
 
 async function generateCandidates(

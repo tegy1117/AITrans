@@ -32,16 +32,21 @@ describe("selection bubble", () => {
     expect(document.querySelector("[data-ai-translator-bubble]")).toBeNull();
   });
 
-  test("does not render dictionary input controls inside the small bubble", () => {
+  test("renders dictionary drawer button without input controls inside the small bubble", () => {
+    const onOpenDictionaryDrawer = vi.fn();
+
     showSelectionBubble({
       anchor: new DOMRect(20, 30, 100, 20),
       state: "translated",
       text: "번역 결과",
-      sourceText: "Original"
+      sourceText: "Original",
+      onOpenDictionaryDrawer
     });
 
-    expect(document.querySelector("[data-action='dictionary']")).toBeNull();
     expect(document.querySelector("[data-role='dictionary-term']")).toBeNull();
+
+    document.querySelector<HTMLButtonElement>("[data-action='dictionary']")?.click();
+    expect(onOpenDictionaryDrawer).toHaveBeenCalledOnce();
   });
 
   test("renders image translation loading and error states", () => {

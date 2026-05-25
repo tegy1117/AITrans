@@ -1,5 +1,7 @@
 export type ProfilePurpose = "page" | "selection" | "image" | "dictionary";
 
+export type SelectionResultDisplayMode = "drawer" | "bubble";
+
 export type MessageRole = "system" | "user" | "assistant";
 
 export type ReasoningEffort = "minimal" | "low" | "medium" | "high";
@@ -70,6 +72,7 @@ export interface ExtensionState {
   activeProfileByPurpose: Record<ProfilePurpose, string>;
   dictionaryEntries: DictionaryEntry[];
   selectionModeEnabled: boolean;
+  selectionResultDisplayMode: SelectionResultDisplayMode;
 }
 
 export type BackgroundRequest =

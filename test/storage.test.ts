@@ -11,6 +11,7 @@ describe("storage state", () => {
       "page",
       "selection"
     ]);
+    expect(state.selectionResultDisplayMode).toBe("drawer");
   });
 
   test("normalizes missing persisted fields without losing provider configs", () => {
@@ -21,6 +22,13 @@ describe("storage state", () => {
     expect(state.providerConfigs).toHaveLength(1);
     expect(state.dictionaryEntries).toEqual([]);
     expect(state.activeProfileByPurpose.page).toBeTruthy();
+    expect(state.selectionResultDisplayMode).toBe("drawer");
+  });
+
+  test("preserves persisted selection result display mode", () => {
+    const state = normalizeState({ selectionResultDisplayMode: "bubble" });
+
+    expect(state.selectionResultDisplayMode).toBe("bubble");
   });
 
   test("repairs active profile ids that no longer exist", () => {

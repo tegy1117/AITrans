@@ -5,6 +5,7 @@ export interface SelectionBubbleOptions {
   state: BubbleState;
   text: string;
   sourceText?: string;
+  onOpenDictionaryDrawer?: () => void;
 }
 
 const BUBBLE_ATTR = "data-ai-translator-bubble";
@@ -41,6 +42,9 @@ export function showSelectionBubble(options: SelectionBubbleOptions): void {
 
   if (options.state === "translated") {
     actions.append(createButton("복사", "copy", () => void navigator.clipboard?.writeText(options.text)));
+    if (options.onOpenDictionaryDrawer) {
+      actions.append(createButton("사전", "dictionary", options.onOpenDictionaryDrawer));
+    }
   }
   actions.append(createButton("닫기", "close", removeSelectionBubble));
   bubble.append(actions);

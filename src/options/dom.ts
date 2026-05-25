@@ -8,6 +8,7 @@ import type {
   PromptProfile,
   ProviderConfig,
   ProviderType,
+  SelectionResultDisplayMode,
   ReasoningEffort
 } from "../shared/types";
 import { validatePromptMessages } from "./promptValidation";
@@ -153,7 +154,7 @@ export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState,
 
   function renderEditor(): HTMLElement {
     const editor = element("section", "settings-editor");
-    editor.append(renderProviderEditor(), renderProfileEditor(), renderDictionaryEntries(), actionButton("전체 설정 저장", async () => {
+    editor.append(renderDisplaySettings(), renderProviderEditor(), renderProfileEditor(), renderDictionaryEntries(), actionButton("전체 설정 저장", async () => {
       try {
         await callbacks.onSave(state);
         statusMessage = "저장했습니다.";
@@ -163,6 +164,25 @@ export function mountOptionsApp(root: HTMLElement, initialState: ExtensionState,
       render();
     }));
     return editor;
+  }
+
+  function renderDisplaySettings(): HTMLElement {
+    const panel = element("div", "settings-panel");
+    panel.append(
+      sectionTitle("표시 설정"),
+      selectRow(
+        "선택 번역 결과 표시 방식",
+        state.selectionResultDisplayMode,
+        ["drawer", "bubble"],
+        (value) => {
+          state = { ...state, selectionResultDisplayMode: value as SelectionResultDisplayMode };
+          render();
+        },
+        selectionResultDisplayModeLabel
+      ),
+      helpText("사이드바는 원문과 번역문을 함께 보여주고, 하단 번역창은 선택 위치 근처에 작은 결과창을 띄웁니다.")
+    );
+    return panel;
   }
 
   function renderProviderEditor(): HTMLElement {
@@ -515,4 +535,8 @@ function reasoningEffortLabel(value: string): string {
   if (value === "low") return "낮음";
   if (value === "medium") return "보통";
   return "높음";
+}
+
+function selectionResultDisplayModeLabel(value: string): string {
+  return value === "bubble" ? "하단 번역창" : "사이드바";
 }

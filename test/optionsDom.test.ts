@@ -66,4 +66,29 @@ describe("options DOM app", () => {
 
     expect(root.textContent).toContain("아직 저장된 사전 항목이 없습니다.");
   });
+
+  test("saves selection result display mode setting", async () => {
+    const root = document.createElement("div");
+    document.body.append(root);
+    const onSave = vi.fn<(state: ExtensionState) => Promise<void>>(async () => undefined);
+    const state = createDefaultState();
+
+    mountOptionsApp(root, state, { onSave });
+
+    const displayModeSelect = Array.from(root.querySelectorAll("label")).find((label) =>
+      label.textContent?.includes("선택 번역 결과 표시 방식")
+    )?.querySelector("select");
+    expect(displayModeSelect).toBeDefined();
+
+    displayModeSelect!.value = "bubble";
+    displayModeSelect!.dispatchEvent(new Event("change"));
+
+    Array.from(root.querySelectorAll("button"))
+      .find((button) => button.textContent === "전체 설정 저장")
+      ?.click();
+    await Promise.resolve();
+
+    expect(onSave).toHaveBeenCalledOnce();
+    expect(onSave.mock.calls[0]?.[0].selectionResultDisplayMode).toBe("bubble");
+  });
 });

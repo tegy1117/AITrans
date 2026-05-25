@@ -21,7 +21,8 @@ export function createDefaultState(): ExtensionState {
       PURPOSES.map((purpose) => [purpose, promptProfiles.find((profile) => profile.purpose === purpose)?.id ?? ""])
     ) as ExtensionState["activeProfileByPurpose"],
     dictionaryEntries: [],
-    selectionModeEnabled: false
+    selectionModeEnabled: false,
+    selectionResultDisplayMode: "drawer"
   };
 }
 
@@ -38,7 +39,8 @@ export function normalizeState(input: Partial<ExtensionState> | undefined | null
     promptProfiles,
     activeProfileByPurpose: normalizeActiveProfiles(promptProfiles, requestedActive),
     dictionaryEntries: input?.dictionaryEntries ?? [],
-    selectionModeEnabled: input?.selectionModeEnabled ?? false
+    selectionModeEnabled: input?.selectionModeEnabled ?? false,
+    selectionResultDisplayMode: input?.selectionResultDisplayMode === "bubble" ? "bubble" : "drawer"
   };
 }
 

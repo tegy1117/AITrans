@@ -13,6 +13,9 @@ describe("translator drawer", () => {
     });
 
     const drawer = document.querySelector("[data-ai-translator-drawer]");
+    expect(drawer?.textContent).toContain("원문");
+    expect(drawer?.textContent).toContain("Original text");
+    expect(drawer?.textContent).toContain("번역문");
     expect(drawer?.textContent).toContain("번역 결과");
 
     drawer?.querySelector<HTMLButtonElement>("[data-action='copy']")?.click();
@@ -63,15 +66,31 @@ describe("translator drawer", () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(onDictionaryRequest).toHaveBeenCalledWith("alpha", "Original context");
-    expect(onDictionaryRequest).toHaveBeenCalledWith("beta", "Original context");
+    const dictionaryContext = "원문:\nOriginal context\n\n번역문:\nalpha beta";
+    expect(onDictionaryRequest).toHaveBeenCalledWith("alpha", dictionaryContext);
+    expect(onDictionaryRequest).toHaveBeenCalledWith("beta", dictionaryContext);
     expect(document.body.textContent).toContain("alpha: 설명");
     expect(document.body.textContent).toContain("beta: 설명");
 
     document.querySelector<HTMLButtonElement>("[data-action='save-dictionary-candidate']")?.click();
     await Promise.resolve();
 
-    expect(onDictionarySave).toHaveBeenCalledWith("alpha", "Original context", "alpha: 설명");
+    expect(onDictionarySave).toHaveBeenCalledWith("alpha", dictionaryContext, "alpha: 설명");
+  });
+
+  test("only translated text selection is used for dictionary highlights", () => {
+    showTranslatorDrawer({
+      state: "translated",
+      text: "translated term",
+      sourceText: "source term"
+    });
+
+    const source = document.querySelector<HTMLElement>("[data-role='drawer-source']")!;
+    selectText(source.firstChild!, 0, 6);
+    source.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
+    const terms = Array.from(document.querySelectorAll("[data-role='highlighted-term-label']")).map((node) => node.textContent);
+    expect(terms).toEqual([]);
   });
 
   test("renders loading and error states", () => {

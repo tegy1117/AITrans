@@ -1,7 +1,8 @@
 import type { BackgroundResponse } from "./shared/types";
 import { collectTranslatableTextNodes, createBatches, replaceTextNodes, restoreTextNodes, type TextReplacement } from "./content/domTranslator";
 import { showTranslatorDrawer } from "./content/translatorDrawer";
-import { rememberSelectionAnchor } from "./content/selectionContext";
+import { showSelectionBubble } from "./content/selectionBubble";
+import { getSelectionAnchor, rememberSelectionAnchor } from "./content/selectionContext";
 
 let replacements: TextReplacement[] = [];
 
@@ -63,19 +64,45 @@ async function translateSelectionText(text: string): Promise<void> {
   const trimmed = text.trim();
   if (!trimmed) return;
 
-  showTranslatorDrawer({ state: "loading", text: "" });
+  const displayMode = await getSelectionResultDisplayMode();
+  const anchor = getSelectionAnchor();
+  if (displayMode === "bubble") {
+    showSelectionBubble({ anchor, state: "loading", text: "" });
+  } else {
+    showTranslatorDrawer({ state: "loading", text: "" });
+  }
 
   const response = await sendBackground({ type: "translateSelection", text: trimmed });
   if (!response.ok || !response.text) {
-    showTranslatorDrawer({ state: "error", text: response.ok ? "선택 번역 결과가 반환되지 않았습니다." : response.error });
+    const errorText = response.ok ? "선택 번역 결과가 반환되지 않았습니다." : response.error;
+    if (displayMode === "bubble") {
+      showSelectionBubble({ anchor, state: "error", text: errorText });
+    } else {
+      showTranslatorDrawer({ state: "error", text: errorText });
+    }
+    return;
+  }
+
+  const drawerOptions = {
+    state: "translated" as const,
+    text: response.text,
+    sourceText: trimmed,
+    ...dictionaryCallbacks()
+  };
+
+  if (displayMode === "bubble") {
+    showSelectionBubble({
+      anchor,
+      state: "translated",
+      text: response.text,
+      sourceText: trimmed,
+      onOpenDictionaryDrawer: () => showTranslatorDrawer(drawerOptions)
+    });
     return;
   }
 
   showTranslatorDrawer({
-    state: "translated",
-    text: response.text,
-    sourceText: trimmed,
-    ...dictionaryCallbacks()
+    ...drawerOptions
   });
 }
 
@@ -101,6 +128,15 @@ async function translateImageUrl(imageUrl: string): Promise<void> {
 
 function sendBackground(message: unknown): Promise<BackgroundResponse> {
   return chrome.runtime.sendMessage(message);
+}
+
+async function getSelectionResultDisplayMode(): Promise<"drawer" | "bubble"> {
+  try {
+    const response = await sendBackground({ type: "getState" });
+    return response.ok && response.state?.selectionResultDisplayMode === "bubble" ? "bubble" : "drawer";
+  } catch {
+    return "drawer";
+  }
 }
 
 function dictionaryCallbacks() {
